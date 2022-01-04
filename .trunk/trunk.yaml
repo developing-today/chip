@@ -1,0 +1,8 @@
+version: 0.1
+cli:
+  version: 0.4.3-beta
+lint:
+  enabled:
+    - clippy@1.56.1
+    - gitleaks@7.6.1
+    - rustfmt@1.56.1
