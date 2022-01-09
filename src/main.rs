@@ -65,41 +65,43 @@ struct Cpu {
  *
  * | Implemented | Opcode | Explanation |
  * -------- | -------------
- * || 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs. |
- * || 00E0 | Clears the screen. |
- * || 00EE | Returns from a subroutine. |
- * || 1NNN | Jumps to address NNN. |
- * || 2NNN | Calls subroutine at NNN. |
- * || 3XNN | Skips the next instruction if VX equals NN. |
- * || 4XNN | Skips the next instruction if VX doesn't equal NN. |
- * || 5XY0 | Skips the next instruction if VX equals VY. |
- * || 6XNN | Sets VX to NN. |
- * || 7XNN | Adds NN to VX. |
- * || 8XY0 | Sets VX to the value of VY. |
- * || 8XY1 | Sets VX to VX or VY. |
- * || 8XY2 | Sets VX to VX and VY. |
- * || 8XY3 | Sets VX to VX xor VY. |
- * |🌱| 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't. |
- * || 8XY5 | VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't. |
- * || 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift. |
- * || 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't. |
+ * |🌱| 0000 | Returns the program.
+ * || 00E0 | Clears the screen.
+ * || 00EE | Returns from a subroutine.
+ * || 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
+ * || 1NNN | Jumps to address NNN.
+ * || 2NNN | Calls subroutine at NNN.
+ * || 3XNN | Skips the next instruction if VX equals NN.
+ * || 4XNN | Skips the next instruction if VX doesn't equal NN.
+ * || 5XY0 | Skips the next instruction if VX equals VY.
+ * || 6XNN | Sets VX to NN.
+ * || 7XNN | Adds NN to VX.
+ * || 8XY0 | Sets VX to the value of VY.
+ * || 8XY1 | Sets VX to VX or VY.
+ * || 8XY2 | Sets VX to VX and VY.
+ * || 8XY3 | Sets VX to VX xor VY.
+ * |🌱| 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
+ * || 8XY5 | VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+ * || 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.
+ * || 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
  * || 8XYE | Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift.|
- * || 9XY0 | Skips the next instruction if VX doesn't equal VY. |
- * || ANNN | Sets I to the address NNN. |
- * || BNNN | Jumps to the address NNN plus V0. |
- * || CXNN | Sets VX to the result of a bitwise and operation on a random number and NN. |
- * || DXYN | Sprites stored in memory at location in index register (I), 8bits wide. Wraps around the screen. If when drawn, clears a pixel, register VF is set to 1 otherwise it is zero. All drawing is XOR drawing (i.e. |it toggles the screen pixels). Sprites are drawn starting at position VX, VY. N is the number of 8bit rows that need to be drawn. If N is greater than 1, second line continues at position VX, VY+1, and so on. |
- * || EX9E | Skips the next instruction if the key stored in VX is pressed. |
- * || EXA1 | Skips the next instruction if the key stored in VX isn't pressed. |
- * || FX07 | Sets VX to the value of the delay timer. |
- * || FX0A | A key press is awaited, and then stored in VX. |
- * || FX15 | Sets the delay timer to VX. |
- * || FX18 | Sets the sound timer to VX. |
- * || FX1E | Adds VX to I.</sup> |
- * || FX29 | Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font. |
- * || FX33 | Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other |words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.) |
- * || FX55 | Stores V0 to VX in memory starting at address I.</sup> |
- * || FX65 | Fills V0 to VX with values from memory starting at address I.</sup> |
+ * || 9XY0 | Skips the next instruction if VX doesn't equal VY.
+ * || ANNN | Sets I to the address NNN.
+ * || BNNN | Jumps to the address NNN plus V0.
+ * || CXNN | Sets VX to the result of a bitwise and operation on a random number and NN.
+ * || DXYN | Sprites stored in memory at location in index register (I), 8bits wide. Wraps around the screen. If when drawn, clears a pixel, register VF is set to 1 otherwise it is zero. All drawing is XOR drawing (i.e. it toggles the screen pixels). Sprites are drawn starting at position VX, VY. N is the number of 8bit rows that need to be drawn. If N is greater than 1, second line continues at position VX, VY+1, and so on.
+ * || EX9E | Skips the next instruction if the key stored in VX is pressed.
+ * || EXA1 | Skips the next instruction if the key stored in VX isn't pressed.
+ * || FX07 | Sets VX to the value of the delay timer.
+ * || FX0A | A key press is awaited, and then stored in VX.
+ * || FX15 | Sets the delay timer to VX.
+ * || FX18 | Sets the sound timer to VX.
+ * || FX1E | Adds VX to I. |
+ * || FX29 | Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+ * || FX33 | Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other |words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
+ * || FX55 | Stores V0 to VX in memory starting at address I.
+ * || FX65 | Fills V0 to VX with values from memory starting at address I.
+ * |🌱| _ | Panic.
  *
  * [https://github.com/dezren39/chip](https://github.com/dezren39/chip)
  */
@@ -119,7 +121,7 @@ impl Cpu {
             let c = ((opcode & 0xF000) >> 12) as u8;
             let x = ((opcode & 0x0F00) >> 8) as u8;
             let y = ((opcode & 0x00F0) >> 4) as u8;
-            let d = ((opcode & 0x000F) >> 0) as u8;
+            let d = (opcode & 0x000F) as u8;
 
             let nnn = opcode & 0x0FFF;
 
@@ -127,46 +129,48 @@ impl Cpu {
                 (0, 0, 0, 0) => {
                     return;
                 }
-                (0x0, _, _, _) => self.todo(),
-                (0x0, 0x0, 0xE, 0x0) => self.todo(),
-                (0x0, 0x0, 0xE, 0xE) => self.todo(),
-                (0x1, _, _, _) => self.todo(),
-                (0x2, _, _, _) => self.todo(),
-                (0x3, _, _, _) => self.todo(),
-                (0x4, _, _, _) => self.todo(),
-                (0x5, _, _, 0x0) => self.todo(),
-                (0x6, _, _, _) => self.todo(),
-                (0x7, _, _, _) => self.todo(),
-                (0x8, _, _, 0x0) => self.todo(),
-                (0x8, _, _, 0x1) => self.todo(),
-                (0x8, _, _, 0x2) => self.todo(),
-                (0x8, _, _, 0x3) => self.todo(),
-                (0x8, _, _, 0x5) => self.todo(),
-                (0x8, _, _, 0x6) => self.todo(),
-                (0x8, _, _, 0x7) => self.todo(),
-                (0x8, _, _, 0xE) => self.todo(),
-                (0x9, _, _, 0x0) => self.todo(),
-                (0xA, _, _, _) => self.todo(),
-                (0xB, _, _, _) => self.todo(),
-                (0xC, _, _, _) => self.todo(),
-                (0xD, _, _, _) => self.todo(),
-                (0xE, _, 0x9, 0xE) => self.todo(),
-                (0xE, _, 0xA, 0x1) => self.todo(),
-                (0xF, _, 0x0, 0x7) => self.todo(),
-                (0xF, _, 0x0, 0xA) => self.todo(),
-                (0xF, _, 0x1, 0x5) => self.todo(),
-                (0xF, _, 0x1, 0x8) => self.todo(),
-                (0xF, _, 0x1, 0xE) => self.todo(),
-                (0xF, _, 0x2, 0x9) => self.todo(),
-                (0xF, _, 0x3, 0x3) => self.todo(),
-                (0xF, _, 0x5, 0x5) => self.todo(),
-                (0xF, _, 0x6, 0x5) => self.todo(),
+                (0x0, 0x0, 0xE, 0x0) => self.todo(), // 00E0 | Clears the screen.
+                (0x0, 0x0, 0xE, 0xE) => self.todo(), // 00EE | Returns from a subroutine.
+                (0x0, _, _, _) => self.todo(), // 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
+                (0x1, _, _, _) => self.todo(), // 1NNN | Jumps to address NNN.
+                (0x2, _, _, _) => self.todo(), // 2NNN | Calls subroutine at NNN.
+                (0x3, _, _, _) => self.todo(), // 3XNN | Skips the next instruction if VX equals NN.
+                (0x4, _, _, _) => self.todo(), // 4XNN | Skips the next instruction if VX doesn't equal NN.
+                (0x5, _, _, 0x0) => self.todo(), // 5XY0 | Skips the next instruction if VX equals VY.
+                (0x6, _, _, _) => self.todo(),   // 6XNN | Sets VX to NN.
+                (0x7, _, _, _) => self.todo(),   // 7XNN | Adds NN to VX.
+                (0x8, _, _, 0x0) => self.todo(), // 8XY0 | Sets VX to the value of VY.
+                (0x8, _, _, 0x1) => self.todo(), // 8XY1 | Sets VX to VX or VY.
+                (0x8, _, _, 0x2) => self.todo(), // 8XY2 | Sets VX to VX and VY.
+                (0x8, _, _, 0x3) => self.todo(), // 8XY3 | Sets VX to VX xor VY.
+                (0x8, _, _, 0x4) => self.todo(), // 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
+                (0x8, _, _, 0x5) => self.todo(), // 8XY5 | VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+                (0x8, _, _, 0x6) => self.todo(), // 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.
+                (0x8, _, _, 0x7) => self.todo(), // 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+                (0x8, _, _, 0xE) => self.todo(), // 8XYE | Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift
+                (0x9, _, _, 0x0) => self.todo(), // 9XY0 | Skips the next instruction if VX doesn't equal VY.
+                (0xA, _, _, _) => self.todo(),   // ANNN | Sets I to the address NNN.
+                (0xB, _, _, _) => self.todo(),   // BNNN | Jumps to the address NNN plus V0.
+                (0xC, _, _, _) => self.todo(), // CXNN | Sets VX to the result of a bitwise and operation on a random number and NN.
+                (0xD, _, _, _) => self.todo(), // DXYN | Sprites stored in memory at location in index register (I), 8bits wide. Wraps around the screen. If when drawn, clears a pixel, register VF is set to 1 otherwise it is zero. All drawing is XOR drawing (i.e. it toggles the screen pixels). Sprites are drawn starting at position VX, VY. N is the number of 8bit rows that need to be drawn. If N is greater than 1, second line continues at position VX, VY+1, and so on.
+                (0xE, _, 0x9, 0xE) => self.todo(), // EX9E | Skips the next instruction if the key stored in VX is pressed.
+                (0xE, _, 0xA, 0x1) => self.todo(), // EXA1 | Skips the next instruction if the key stored in VX isn't pressed.
+                (0xF, _, 0x0, 0x7) => self.todo(), // FX07 | Sets VX to the value of the delay timer.
+                (0xF, _, 0x0, 0xA) => self.todo(), // FX0A | A key press is awaited, and then stored in VX.
+                (0xF, _, 0x1, 0x5) => self.todo(), // FX15 | Sets the delay timer to VX.
+                (0xF, _, 0x1, 0x8) => self.todo(), // FX18 | Sets the sound timer to VX.
+                (0xF, _, 0x1, 0xE) => self.todo(), // FX1E | Adds VX to I.
+                (0xF, _, 0x2, 0x9) => self.todo(), // FX29 | Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) ar
+                (0xF, _, 0x3, 0x3) => self.todo(), // FX33 | Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
+                (0xF, _, 0x5, 0x5) => self.todo(), // FX55 | Stores V0 to VX in memory starting at address I.
+                (0xF, _, 0x6, 0x5) => self.todo(), // FX65 | Fills V0 to VX with values from memory starting at address I.
+                _ => panic!("[ERROR] Unimplemented opcode: {:X}", opcode),
             }
         }
     }
 
     fn todo(&mut self) -> ! {
-        panic!("TODO")
+        panic!("[TODO] Unimplemented opcode: {:X}", self.read_opcode());
     }
 }
 
