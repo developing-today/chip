@@ -12,5 +12,25 @@
         "**/.gitignore": true,
         "**/target": true
     },
-    "explorerExclude.backup": null
+    "explorerExclude.backup": null,
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#dda3cc",
+        "activityBar.activeBorder": "#5f742b",
+        "activityBar.background": "#dda3cc",
+        "activityBar.foreground": "#15202b",
+        "activityBar.inactiveForeground": "#15202b99",
+        "activityBarBadge.background": "#5f742b",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "sash.hoverBorder": "#dda3cc",
+        "statusBar.background": "#cf7eb8",
+        "statusBar.foreground": "#15202b",
+        "statusBarItem.hoverBackground": "#c159a4",
+        "statusBarItem.remoteBackground": "#cf7eb8",
+        "statusBarItem.remoteForeground": "#15202b",
+        "titleBar.activeBackground": "#cf7eb8",
+        "titleBar.activeForeground": "#15202b",
+        "titleBar.inactiveBackground": "#cf7eb899",
+        "titleBar.inactiveForeground": "#15202b99"
+    },
+    "peacock.color": "#cf7eb8"
 }
