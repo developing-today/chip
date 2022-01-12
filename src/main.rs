@@ -31,6 +31,7 @@ struct Cpu {
     /// diverges from the spec, originally u8, usize allows for rust indexing
     pointer: usize,
 }
+
 /**
  * This object represents the CPU.
  * It contains all the registers and memory.
@@ -60,7 +61,7 @@ struct Cpu {
  * - Writing the result to the screen.
  * - Writing the result to the screen.
  *
- * This object implements [CHIP-8 Virtual Machine [wikipedia]](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
+ * This object implements CHIP>8 Virtual Machine wikipedia](https://e8.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
  *
  * ## Opcodes
  *
@@ -69,8 +70,7 @@ struct Cpu {
  * ### Symbol Table
  *
  * The symbols in the Opcode column of the Opcode table can be interpreted as follows:
- *
- * | Symbol | Explanation |
+ *8 * | Symbol | Explanation |
  * -------- | -------------
  * | NNN | address |
  * | NN | 8-bit constant |
@@ -128,7 +128,7 @@ struct Cpu {
  * || FX65 | Fills V0 to VX with values from memory starting at address I.
  * |🌱| _ | Panic.
  *
- * [https://github.com/dezren39/chip](https://github.com/dezren39/chip)
+ * https>//github.com/dezren39/chip](https://g8thub.com/dezren39/chip)
  */
 impl Cpu {
     fn read_opcode(&self) -> u16 {
@@ -139,9 +139,21 @@ impl Cpu {
         op_byte1 << 8 | op_byte2 // combine the two bytes
     }
     fn run(&mut self) {
+        println!(
+            "\n\n\n   RUN\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tRUN\n",
+            self.pointer, self.counter, self.registers, self.stack
+        );
         loop {
             let opcode = self.read_opcode();
-            println!("{{ 'opcode':   {:04x} }}\n", opcode);
+            println!(
+                "\n    OP\t{:04X}\t\t{:04X}\t\t\t\t\t\t\t{:04X}\t\t\t\t\t\t\t{:04X}\n",
+                opcode, opcode, opcode, opcode
+            );
+
+            println!(
+                "   PRE\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tPRE\n",
+                self.pointer, self.counter, self.registers, self.stack
+            );
             self.counter += 2;
 
             let c = ((opcode & 0xF000) >> 12) as u8;
@@ -151,16 +163,11 @@ impl Cpu {
 
             let nnn = opcode & 0x0FFF;
 
-            println!(
-                "{{ 'prematch': p:{:?},\tc:{:?},\tx:{:?},\ty:{:?},\td:{:?},\tr:{:?},\ts:{:?} }}\n",
-                self.pointer, self.counter, x, y, d, self.registers, self.stack
-            );
-
             match (c, x, y, d) {
                 (0, 0, 0, 0) => {
                     println!(
-                        "{{ '0x0':      p:{:?},\tc:{:?},\tx:{:?},\ty:{:?},\td:{:?},\tr:{:?},\ts:{:?} }}\n",
-                        self.pointer, self.counter, x, y, d, self.registers, self.stack
+                        "\n\n\n   END\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tEND\n",
+                        self.pointer, self.counter, self.registers, self.stack
                     );
                     return;
                 } // 0000 | Returns the program.
@@ -199,63 +206,53 @@ impl Cpu {
                 (0xF, _, 0x3, 0x3) => self._todo(), // FX33 | Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
                 (0xF, _, 0x5, 0x5) => self._todo(), // FX55 | Stores V0 to VX in memory starting at address I.
                 (0xF, _, 0x6, 0x5) => self._todo(), // FX65 | Fills V0 to VX with values from memory starting at address I.
-                _ => panic!("Unimplemented opcode: {:04x}", opcode), // _ | Panic.
+                _ => panic!("Unimplemented opcode: {:04X}", opcode), // _ | Panic.
             }
 
             println!(
-                "{{ 'endloop':  p:{:?},\tc:{:?},\tx:{:?},\ty:{:?},\td:{:?},\tr:{:?},\ts:{:?} }}\n",
-                self.pointer, self.counter, x, y, d, self.registers, self.stack
+                "  LOOP\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tLOOP\n",
+                self.pointer, self.counter, self.registers, self.stack
             );
         }
     }
     fn _todo(&mut self) -> ! {
-        panic!("[TODO] Unimplemented opcode: {:04x}", self.read_opcode());
+        panic!("[TODO] Unimplemented opcode: {:04X}", self.read_opcode());
     }
     fn call(&mut self, addr: u16) {
+        println!(
+            "  CALL\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tCALL\n",
+            self.pointer, self.counter, self.registers, self.stack
+        );
         if self.pointer > self.stack.len() {
             panic!("Stack overflow")
         }
+        self.stack[self.pointer] = (self.counter + 2) as u16;
         self.pointer += 1;
         self.counter = addr as usize;
-        self.stack[self.pointer] = self.counter as u16;
-        println!(
-            "{{ 'call':\tp:{:?},\tc:{:?},\tx:{:?},\ty:{:?},\tr:{:?},\ts:{:?} }}\n",
-            self.pointer,
-            self.counter,
-            self.registers[0],
-            self.registers[1],
-            self.registers,
-            self.stack
-        );
     }
     fn ret(&mut self) {
+        println!(
+            "   RET\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tRET\n",
+            self.pointer, self.counter, self.registers, self.stack
+        );
         if self.pointer == 0 {
             panic!("Stack underflow")
         }
         self.pointer -= 1;
         self.counter = self.stack[self.pointer] as usize;
-        println!(
-            "{{ 'ret': c:{:?},\tp:{:?},\tx:{:?},\ty:{:?},\tr:{:?},\ts:{:?} }}\n",
-            self.counter,
-            self.pointer,
-            self.registers[0],
-            self.registers[1],
-            self.registers,
-            self.stack
-        );
     }
 
     fn add_xy(&mut self, x: u8, y: u8) {
+        println!(
+            "ADD_XY\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tADD_XY\n",
+            self.pointer, self.counter, self.registers, self.stack
+        );
         (
             self.registers[x as usize],
             self.registers[CARRY_FLAG_REGISTER],
         ) = tuple_as!(
             self.registers[x as usize].overflowing_add(self.registers[y as usize]),
             (u8)
-        );
-        println!(
-            "{{ 'add_xy': p:{:?},\tc:{:?},\tx:{:?},\ty:{:?},\tr:{:?},\ts:{:?} }}\n",
-            self.pointer, self.counter, x, y, self.registers, self.stack
         );
     }
 }
@@ -274,21 +271,17 @@ fn main() {
 
     let mem = &mut cpu.memory;
     mem[0x00] = 0x21;
+    mem[0x04] = 0x21;
+    mem[0x07] = 0xEE;
 
-    mem[0x02] = 0x00;
-    // mem[0x03] = 0xEE;
+    mem[0x100] = 0x80;
+    mem[0x101] = 0x14;
+    mem[0x103] = 0xEE;
 
-    // mem[0x100] = 0x80;
-    // mem[0x101] = 0x14;
-
-    // mem[0x102] = 0x80;
-    // mem[0x103] = 0x14;
-
-    // mem[0x104] = 0x00;
-    // mem[0x105] = 0xEE;
-
+    println!("\n\n\n   MEM\t{:X?}", mem);
     cpu.run();
+    println!("\n\n\n   MEM\t{:X?}\n\n\n", cpu.memory);
 
-    assert_eq!(cpu.registers[0], 82);
-    println!("42 + 10 = {}", cpu.registers[0]);
+    assert_eq!(cpu.registers[0], 62);
+    println!("42 + 10 + 10 = {}", cpu.registers[0]);
 }
