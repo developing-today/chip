@@ -223,7 +223,7 @@ impl Cpu {
             "  CALL\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tCALL\n",
             self.pointer, self.counter, self.registers, self.stack
         );
-        if self.pointer > self.stack.len() {
+        if self.pointer >= self.stack.len() {
             panic!("Stack overflow")
         }
         self.stack[self.pointer] = self.counter as u16;
@@ -267,11 +267,12 @@ fn main() {
     };
 
     cpu.registers[0] = 42;
-    cpu.registers[1] = 10;
+    cpu.registers[1] = 5;
 
     let mem = &mut cpu.memory;
-    mem[0x00] = 0x21;
-    mem[0x02] = 0x21;
+    mem[0x0] = 0x21;
+    mem[0x2] = 0x21;
+    mem[0x4] = 0x22;
 
     mem[0x100] = 0x80;
     mem[0x101] = 0x14;
@@ -279,10 +280,17 @@ fn main() {
     mem[0x103] = 0x14;
     mem[0x105] = 0xEE;
 
+    mem[0x200] = 0x21;
+    mem[0x202] = 0x21;
+    mem[0x205] = 0xEE;
+
     println!("\n\n\n   MEM\t{:X?}", mem);
     cpu.run();
     println!("\n\n\n   MEM\t{:X?}\n\n\n", cpu.memory);
 
     assert_eq!(cpu.registers[0], 82);
-    println!("((42 + 10 + 10) + 10 + 10) = {}", cpu.registers[0]);
+    println!(
+        "(((((42 + 5 + 5) + 5 + 5)) + 5 + 5) + 5 + 5) = {}",
+        cpu.registers[0]
+    );
 }
