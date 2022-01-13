@@ -140,20 +140,20 @@ impl Cpu {
     }
     fn run(&mut self) {
         println!(
-            "\n\n\n   RUN\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tRUN\n",
+            "\n\n\n   RUN\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRUN",
             self.pointer, self.counter, self.registers, self.stack
         );
         loop {
             let opcode = self.read_opcode();
             println!(
-                "\n    OP\t{:04X}\t\t{:04X}\t\t\t\t\t\t\t{:04X}\t\t\t\t\t\t\t{:04X}\n",
-                opcode, opcode, opcode, opcode
+                "\n    OP\t{:04X?}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t{:04X?}\n",
+                opcode, opcode
             );
 
-            println!(
-                "   PRE\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tPRE\n",
-                self.pointer, self.counter, self.registers, self.stack
-            );
+            // println!(
+            //     "   PRE\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tPRE\n",
+            //     self.pointer, self.counter, self.registers, self.stack
+            // );
             self.counter += 2;
 
             let c = ((opcode & 0xF000) >> 12) as u8;
@@ -166,7 +166,7 @@ impl Cpu {
             match (c, x, y, d) {
                 (0, 0, 0, 0) => {
                     println!(
-                        "\n\n\n   END\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tEND\n",
+                        "   END\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tEND\n",
                         self.pointer, self.counter, self.registers, self.stack
                     );
                     return;
@@ -206,33 +206,33 @@ impl Cpu {
                 (0xF, _, 0x3, 0x3) => self._todo(), // FX33 | Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
                 (0xF, _, 0x5, 0x5) => self._todo(), // FX55 | Stores V0 to VX in memory starting at address I.
                 (0xF, _, 0x6, 0x5) => self._todo(), // FX65 | Fills V0 to VX with values from memory starting at address I.
-                _ => panic!("Unimplemented opcode: {:04X}", opcode), // _ | Panic.
+                _ => panic!("Unimplemented opcode: {:04X?}", opcode), // _ | Panic.
             }
 
             println!(
-                "  LOOP\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tLOOP\n",
+                "  LOOP\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}",
                 self.pointer, self.counter, self.registers, self.stack
             );
         }
     }
     fn _todo(&mut self) -> ! {
-        panic!("[TODO] Unimplemented opcode: {:04X}", self.read_opcode());
+        panic!("[TODO] Unimplemented opcode: {:04X?}", self.read_opcode());
     }
     fn call(&mut self, addr: u16) {
         println!(
-            "  CALL\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tCALL\n",
+            "  CALL\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tCALL\n",
             self.pointer, self.counter, self.registers, self.stack
         );
         if self.pointer > self.stack.len() {
             panic!("Stack overflow")
         }
-        self.stack[self.pointer] = (self.counter + 2) as u16;
+        self.stack[self.pointer] = self.counter as u16;
         self.pointer += 1;
         self.counter = addr as usize;
     }
     fn ret(&mut self) {
         println!(
-            "   RET\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tRET\n",
+            "   RET\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRET\n",
             self.pointer, self.counter, self.registers, self.stack
         );
         if self.pointer == 0 {
@@ -244,7 +244,7 @@ impl Cpu {
 
     fn add_xy(&mut self, x: u8, y: u8) {
         println!(
-            "ADD_XY\tp:{:?}\tc:{:04X}\tr:{:?}\ts:{:X?}\tADD_XY\n",
+            "ADD_XY\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD_XY\n",
             self.pointer, self.counter, self.registers, self.stack
         );
         (
@@ -271,17 +271,18 @@ fn main() {
 
     let mem = &mut cpu.memory;
     mem[0x00] = 0x21;
-    mem[0x04] = 0x21;
-    mem[0x07] = 0xEE;
+    mem[0x02] = 0x21;
 
     mem[0x100] = 0x80;
     mem[0x101] = 0x14;
-    mem[0x103] = 0xEE;
+    mem[0x102] = 0x80;
+    mem[0x103] = 0x14;
+    mem[0x105] = 0xEE;
 
     println!("\n\n\n   MEM\t{:X?}", mem);
     cpu.run();
     println!("\n\n\n   MEM\t{:X?}\n\n\n", cpu.memory);
 
-    assert_eq!(cpu.registers[0], 62);
-    println!("42 + 10 + 10 = {}", cpu.registers[0]);
+    assert_eq!(cpu.registers[0], 82);
+    println!("((42 + 10 + 10) + 10 + 10) = {}", cpu.registers[0]);
 }
