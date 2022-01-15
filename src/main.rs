@@ -17,18 +17,18 @@ macro_rules! tuple_as {
     }};
 }
 
-/// 0xF is the last register and is used as the carry flag
+// 0xF is the last register and is used as the carry flag
 const CARRY_FLAG_REGISTER: usize = 0xF;
 
 #[derive(Debug, Clone, Copy)]
 struct Cpu {
     registers: [u8; 16],
-    /// diverges from the spec, originally 0x0-0x1 was reserved for system use, this is unneeded in this implementation, and so all memory is accessible.
+    // diverges from the spec, originally 0x0-0x1 was reserved for system use, this is unneeded in this implementation, and so all memory is accessible.
     memory: [u8; 4096],
-    /// diverges from the spec, originally u8, usize allows for rust indexing
+    // diverges from the spec, originally u8, usize allows for rust indexing
     counter: usize,
     stack: [u16; 16],
-    /// diverges from the spec, originally u8, usize allows for rust indexing
+    // diverges from the spec, originally u8, usize allows for rust indexing
     pointer: usize,
 }
 
@@ -186,7 +186,7 @@ impl Cpu {
                 (0x8, _, _, 0x2) => self._todo(), // 8XY2 | Sets VX to VX and VY.
                 (0x8, _, _, 0x3) => self._todo(), // 8XY3 | Sets VX to VX xor VY.
                 (0x8, _, _, 0x4) => self.add_xy(x, y), // 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
-                (0x8, _, _, 0x5) => self._todo(), // 8XY5 | VY is subtracted from VX. VF is set to 0 whedin there's a borrow, and 1 when there isn't.
+                (0x8, _, _, 0x5) => self.sub_xy(x, y), // 8XY5 | VY is subtracted from VX. VF is set to 0 whedin there's a borrow, and 1 when there isn't.
                 (0x8, _, _, 0x6) => self._todo(), // 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.
                 (0x8, _, _, 0x7) => self._todo(), // 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
                 (0x8, _, _, 0xE) => self._todo(), // 8XYE | Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift
@@ -255,6 +255,20 @@ impl Cpu {
             (u8)
         );
     }
+
+    fn sub_xy(&mut self, x: u8, y: u8) {
+        println!(
+            "SUB_XY\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD_XY\n",
+            self.pointer, self.counter, self.registers, self.stack
+        );
+        (
+            self.registers[x as usize],
+            self.registers[CARRY_FLAG_REGISTER],
+        ) = tuple_as!(
+            self.registers[x as usize].overflowing_sub(self.registers[y as usize]),
+            (u8)
+        );
+    }
 }
 
 fn main() {
@@ -270,27 +284,36 @@ fn main() {
     cpu.registers[1] = 5;
 
     let mem = &mut cpu.memory;
-    mem[0x0] = 0x21;
-    mem[0x2] = 0x21;
-    mem[0x4] = 0x22;
+    mem[0x0] = 0x21; // call fn add twice // 2NNN | Calls subroutine at NNN.
+    mem[0x2] = 0x21; // call fn sub twice // 2NNN | Calls subroutine at NNN.
+    mem[0x3] = 0x06;
+    mem[0x4] = 0x21; // call fn add twice then sub twice // 2NNN | Calls subroutine at NNN.
+    mem[0x5] = 0x0C;
+    // leave two bytes for the program return // 0000 | Returns the program.
 
-    mem[0x100] = 0x80;
+    // fn add twice
+    mem[0x100] = 0x80; // 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry,
     mem[0x101] = 0x14;
-    mem[0x102] = 0x80;
+    mem[0x102] = 0x80; // 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry,
     mem[0x103] = 0x14;
-    mem[0x105] = 0xEE;
+    mem[0x105] = 0xEE; // leave two bytes for the subroutine return // 00EE | Returns from a subroutine.
 
-    mem[0x200] = 0x21;
-    mem[0x202] = 0x21;
-    mem[0x205] = 0xEE;
+    // fn sub twice
+    mem[0x106] = 0x80; // 8XY5 | VY is subtracted from VX. VF is set to 0 whedin there's a borrow, and 1 when there isn't.
+    mem[0x107] = 0x15;
+    mem[0x108] = 0x80; // 8XY5 | VY is subtracted from VX. VF is set to 0 whedin there's a borrow, and 1 when there isn't.
+    mem[0x109] = 0x15;
+    mem[0x10B] = 0xEE; // leave two bytes for the subroutine return // 00EE | Returns from a subroutine.
+
+    // fn add twice then call sub twice
+    mem[0x10C] = 0x21; // call fn add twice // 2NNN | Calls subroutine at NNN.
+    mem[0x10E] = 0x21; // call fn sub twice // 2NNN | Calls subroutine at NNN.
+    mem[0x10F] = 0x06;
+    mem[0x111] = 0xEE; // leave two bytes for the subroutine return // 00EE | Returns from a subroutine.
 
     println!("\n\n\n   MEM\t{:X?}", mem);
     cpu.run();
     println!("\n\n\n   MEM\t{:X?}\n\n\n", cpu.memory);
 
-    assert_eq!(cpu.registers[0], 82);
-    println!(
-        "(((((42 + 5 + 5) + 5 + 5)) + 5 + 5) + 5 + 5) = {}",
-        cpu.registers[0]
-    );
+    println!("{}", cpu.registers[0]);
 }
