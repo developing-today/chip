@@ -1,11 +1,14 @@
-# chip implements [CHIP-8 Virtual Machine [wikipedia]](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
+# chip implements [CHIP-8 Virtual Machine - wikipedia](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
 
 chip was developed using
 
 - Rust In Action chapter 5 program to implement initial cpu, run, call, and opcodes for `[0000,00EE,2NNN,8XY4,_]`.
-- [CHIP-8 Virtual Machine Description [wikipedia]](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
+- [CHIP-8 Virtual Machine Description [wikipedia](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
 - just the readme from [jlmbaka/chip8](https://github.com/jlmbaka/chip8)
 - google copilot hints
+- [Cowgod's Chip-8 Technical Reference v1.0 - C8TECH10.HTM](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)
+- [Guide to making a CHIP-8 interpreter](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/)
+- [Mastering SuperChip](http://johnearnest.github.io/Octo/docs/SuperChip.html)
 
 ## Setup
 

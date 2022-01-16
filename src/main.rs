@@ -17,19 +17,34 @@ macro_rules! tuple_as {
     }};
 }
 
-// 0xF is the last register and is used as the carry flag
+/// 0xF is the last register and is used as the carry flag
 const CARRY_FLAG_REGISTER: usize = 0xF;
 
 #[derive(Debug, Clone, Copy)]
 struct Cpu {
+    /// programs should not use 0xF, the original last register, as a general purpose register
+    /// CARRY_FLAG_REGISTER is used as the carry flag and is the original last register, 0xF
+    // TODO: usize but should be u8 compatible with the original chip8 implementation, shift, etc. overflow?
     registers: [u8; 16],
-    // diverges from the spec, originally 0x0-0x1 was reserved for system use, this is unneeded in this implementation, and so all memory is accessible.
-    memory: [u8; 4096],
-    // diverges from the spec, originally u8, usize allows for rust indexing
+    /// diverges from the spec, originally 0x0-0x2 was reserved for system use, this is unneeded in this implementation, and so all memory is accessible.
+    /// diverges from the spec, originally u8, usize allows for rust indexing
+    /// this works because the spec only allows for 16 bit memory access
+    /// but this can be handled by casting to u16 for opcode and
+    memory: [usize; 4096],
+    /// diverges from the spec, originally u16, usize allows for rust indexing
     counter: usize,
-    stack: [u16; 16],
-    // diverges from the spec, originally u8, usize allows for rust indexing
+    /// diverges from spec, originally 16, 256
+    /// this allows larger programs to be run
+    /// diverges from the spec, originally u16, usize allows for rust indexing
+    stack: [usize; 256],
+    /// diverges from the spec, originally u8, usize allows for rust indexing
     pointer: usize,
+    /// diverges from the spec, originally u16, usize allows for rust indexing
+    i: usize,
+    /// diverges from the spec, originally u8, usize allows for rust indexing
+    delay: usize,
+    /// diverges from the spec, originally u8, usize allows for rust indexing
+    sound: usize,
 }
 
 /**
@@ -93,7 +108,7 @@ struct Cpu {
  * |🌱| 0000 | Returns the program.
  * || 00E0 | Clears the screen.
  * || 00EE | Returns from a subroutine.
- * || 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
+ * |☠️| 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
  * || 1NNN | Jumps to address NNN.
  * || 2NNN | Calls subroutine at NNN.
  * || 3XNN | Skips the next instruction if VX equals NN.
@@ -106,7 +121,7 @@ struct Cpu {
  * || 8XY2 | Sets VX to VX and VY.
  * || 8XY3 | Sets VX to VX xor VY.
  * |🌱| 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
- * || 8XY5 | VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+ * |🌱| 8XY5 | VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
  * || 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.
  * || 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
  * || 8XYE | Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift.|
@@ -131,29 +146,29 @@ struct Cpu {
  * https>//github.com/dezren39/chip](https://g8thub.com/dezren39/chip)
  */
 impl Cpu {
-    fn read_opcode(&self) -> u16 {
+    fn read_opcode(&self) -> (usize, usize) {
         let p = self.counter;
-        let op_byte1 = self.memory[p] as u16;
-        let op_byte2 = self.memory[p + 1] as u16;
+        let op_byte1 = self.memory[p];
+        let op_byte2 = self.memory[p + 1];
 
-        op_byte1 << 8 | op_byte2 // combine the two bytes
+        (op_byte1, op_byte2) // combine the two bytes
     }
     fn run(&mut self) {
         println!(
-            "\n\n\n   RUN\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRUN",
-            self.pointer, self.counter, self.registers, self.stack
+            "\n\n\n   RUN\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRUN",
+            self.pointer,
+            self.i,
+            self.counter,
+            self.registers,
+            &self.stack[0..15]
         );
         loop {
-            let opcode = self.read_opcode();
+            let opcode_bytes = self.read_opcode();
+            let opcode = ((opcode_bytes.0 as u8) as u16) << 8 | (opcode_bytes.1 as u8) as u16;
             println!(
-                "\n    OP\t{:04X?}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t{:04X?}\n",
-                opcode, opcode
+                "\n    OP\t{:04X?}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t{:04X?}\t{:04X?}\t{:04X?}\n",
+                opcode, opcode, opcode, opcode
             );
-
-            // println!(
-            //     "   PRE\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tPRE\n",
-            //     self.pointer, self.counter, self.registers, self.stack
-            // );
             self.counter += 2;
 
             let c = ((opcode & 0xF000) >> 12) as u8;
@@ -166,16 +181,20 @@ impl Cpu {
             match (c, x, y, d) {
                 (0, 0, 0, 0) => {
                     println!(
-                        "   END\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tEND\n",
-                        self.pointer, self.counter, self.registers, self.stack
+                        "   END\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tEND\n",
+                        self.pointer,
+                        self.i,
+                        self.counter,
+                        self.registers,
+                        &self.stack[0..15]
                     );
                     return;
                 } // 0000 | Returns the program.
                 (0x0, 0x0, 0xE, 0x0) => self._todo(), // 00E0 | Clears the screen.
                 (0x0, 0x0, 0xE, 0xE) => self.ret(),   // 00EE | Returns from a subroutine.
-                (0x0, _, _, _) => self._todo(), // 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
-                (0x1, _, _, _) => self._todo(), // 1NNN | Jumps to address NNN.
-                (0x2, _, _, _) => self.call(nnn), // 2NNN | Calls subroutine at NNN.
+                (0x0, _, _, _) => self._deprecated(), // 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
+                (0x1, _, _, _) => self._todo(),       // 1NNN | Jumps to address NNN.
+                (0x2, _, _, _) => self.call(nnn as usize), // 2NNN | Calls subroutine at NNN.
                 (0x3, _, _, _) => self._todo(), // 3XNN | Skips the next instruction if VX equals NN.
                 (0x4, _, _, _) => self._todo(), // 4XNN | Skips the next instruction if VX doesn't equal NN.
                 (0x5, _, _, 0x0) => self._todo(), // 5XY0 | Skips the next instruction if VX equals VY.
@@ -185,7 +204,7 @@ impl Cpu {
                 (0x8, _, _, 0x1) => self._todo(), // 8XY1 | Sets VX to VX or VY.
                 (0x8, _, _, 0x2) => self._todo(), // 8XY2 | Sets VX to VX and VY.
                 (0x8, _, _, 0x3) => self._todo(), // 8XY3 | Sets VX to VX xor VY.
-                (0x8, _, _, 0x4) => self.add_xy(x, y), // 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
+                (0x8, _, _, 0x4) => self.add_xy(x, y), // 8XY4 | Adds VY to VX. VF is set to 1 when there's a cu16arry, and to 0 when there isn't.
                 (0x8, _, _, 0x5) => self.sub_xy(x, y), // 8XY5 | VY is subtracted from VX. VF is set to 0 whedin there's a borrow, and 1 when there isn't.
                 (0x8, _, _, 0x6) => self._todo(), // 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.
                 (0x8, _, _, 0x7) => self._todo(), // 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
@@ -210,42 +229,64 @@ impl Cpu {
             }
 
             println!(
-                "  LOOP\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}",
-                self.pointer, self.counter, self.registers, self.stack
+                "  LOOP\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}",
+                self.pointer,
+                self.i,
+                self.counter,
+                self.registers,
+                &self.stack[0..15]
             );
         }
     }
     fn _todo(&mut self) -> ! {
         panic!("[TODO] Unimplemented opcode: {:04X?}", self.read_opcode());
     }
-    fn call(&mut self, addr: u16) {
+    fn _deprecated(&mut self) -> ! {
+        panic!(
+            "[deprecated] Unimplemented opcode: {:04X?}",
+            self.read_opcode()
+        );
+    }
+    fn call(&mut self, addr: usize) {
         println!(
-            "  CALL\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tCALL\n",
-            self.pointer, self.counter, self.registers, self.stack
+            "  CALL\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tCALL\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            self.registers,
+            &self.stack[0..15]
         );
         if self.pointer >= self.stack.len() {
             panic!("Stack overflow")
         }
-        self.stack[self.pointer] = self.counter as u16;
+        self.stack[self.pointer] = self.counter;
         self.pointer += 1;
-        self.counter = addr as usize;
+        self.counter = addr;
     }
     fn ret(&mut self) {
         println!(
-            "   RET\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRET\n",
-            self.pointer, self.counter, self.registers, self.stack
+            "   RET\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRET\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            self.registers,
+            &self.stack[0..15]
         );
         if self.pointer == 0 {
             panic!("Stack underflow")
         }
         self.pointer -= 1;
-        self.counter = self.stack[self.pointer] as usize;
+        self.counter = self.stack[self.pointer];
     }
 
     fn add_xy(&mut self, x: u8, y: u8) {
         println!(
-            "ADD_XY\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD_XY\n",
-            self.pointer, self.counter, self.registers, self.stack
+            "ADD_XY\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD_XY\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            self.registers,
+            &self.stack[0..15]
         );
         (
             self.registers[x as usize],
@@ -258,8 +299,12 @@ impl Cpu {
 
     fn sub_xy(&mut self, x: u8, y: u8) {
         println!(
-            "SUB_XY\tp:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD_XY\n",
-            self.pointer, self.counter, self.registers, self.stack
+            "SUB_XY\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD_XY\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            self.registers,
+            &self.stack[0..15]
         );
         (
             self.registers[x as usize],
@@ -276,8 +321,11 @@ fn main() {
         registers: [0; 16],
         memory: [0; 4096],
         counter: 0,
-        stack: [0; 16],
+        stack: [0; 256],
         pointer: 0,
+        i: 0,
+        delay: 0,
+        sound: 0,
     };
 
     cpu.registers[0] = 42;
@@ -311,9 +359,10 @@ fn main() {
     mem[0x10F] = 0x06;
     mem[0x111] = 0xEE; // leave two bytes for the subroutine return // 00EE | Returns from a subroutine.
 
-    println!("\n\n\n   MEM\t{:X?}", mem);
+    println!("\n\n\n   MEM\t{:X?}", &mem[0..1024]);
     cpu.run();
-    println!("\n\n\n   MEM\t{:X?}\n\n\n", cpu.memory);
+    println!("\n\n\n   MEM\t{:X?}\n\n\n", &cpu.memory[0..1024]);
 
     println!("{}", cpu.registers[0]);
+    assert_eq!(cpu.registers[0], 42);
 }
