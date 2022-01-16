@@ -9,7 +9,8 @@ chip was developed using
 - [Cowgod's Chip-8 Technical Reference v1.0 - C8TECH10.HTM](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)
 - [Guide to making a CHIP-8 interpreter](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/)
 - [Mastering SuperChip](http://johnearnest.github.io/Octo/docs/SuperChip.html)
-
+- [Chip-8 Design Specification - Columbia University](http://www.cs.columbia.edu/~sedwards/classes/2016/4840-spring/designs/Chip8.pdf)
+- [CHIP-8 virtual machine specification](https://tonisagrista.com/blog/2021/chip8-spec/)
 ## Setup
 
 - install rust >=1.59 (or enable nightly/feature(destructuring_assignment))
