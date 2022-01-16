@@ -171,10 +171,11 @@ impl Cpu {
             let c = (((opcode & 0xF000) >> 12) as u8) as usize;
             let x = (((opcode & 0x0F00) >> 8) as u8) as usize;
             let y = (((opcode & 0x00F0) >> 4) as u8) as usize;
-            let d = ((opcode & 0x000F) as u8) as usize;
-            let nnn = (opcode & 0x0FFF) as usize;
+            let n = ((opcode & 0x000F) as u8) as usize;
+            let kk = y << 4 | n;
+            let addr = (opcode & 0x0FFF) as usize;
 
-            match (c, x, y, d) {
+            match (c, x, y, n) {
                 (0, 0, 0, 0) => {
                     println!(
                         "   END\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tEND\n",
@@ -189,38 +190,38 @@ impl Cpu {
                 (0x0, 0x0, 0xE, 0x0) => self._todo(), // 00E0 | Clears the screen.
                 (0x0, 0x0, 0xE, 0xE) => self.ret(),   // 00EE | Returns from a subroutine.
                 (0x0, _, _, _) => self._deprecated(), // 0NNN | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
-                (0x1, _, _, _) => self.jump(nnn),     // 1NNN | Jumps to address NNN.
-                (0x2, _, _, _) => self.call(nnn),     // 2NNN | Calls subroutine at address NNN.
-                (0x3, _, _, _) => self.skip_if_equal(x, y), // 3XKK | Skips the next instruction if VX equals KK.
+                (0x1, _, _, _) => self.jump(addr),    // 1NNN | Jumps to address NNN.
+                (0x2, _, _, _) => self.call(addr),    // 2NNN | Calls subroutine at address NNN.
+                (0x3, _, _, _) => self.skip_if_equal(x, kk), // 3XKK | Skips the next instruction if VX equals KK.
                 (0x4, _, _, _) => self.skip_if_not_equal(x, y), // 4XKK | Skips the next instruction if VX doesn't equal KK.
-                (0x5, _, _, 0x0) => self._todo(), // 5XY0 | Skips the next instruction if VX equals VY.
-                (0x6, _, _, _) => self._todo(),   // 6XKK | Sets VX to KK.
-                (0x7, _, _, _) => self._todo(),   // 7XKK | Adds KK to VX.
-                (0x8, _, _, 0x0) => self._todo(), // 8XY0 | Sets VX to the value of VY.
-                (0x8, _, _, 0x1) => self._todo(), // 8XY1 | Sets VX to VX or VY.
-                (0x8, _, _, 0x2) => self._todo(), // 8XY2 | Sets VX to VX and VY.
-                (0x8, _, _, 0x3) => self._todo(), // 8XY3 | Sets VX to VX xor VY.
+                (0x5, _, _, 0x0) => self.skip_if_equal(x, y), // 5XY0 | Skips the next instruction if VX equals VY.
+                (0x6, _, _, _) => self.ld_kk(x, kk),          // 6XKK | Sets VX to KK.
+                (0x7, _, _, _) => self.add_kk(x, kk),         // 7XKK | Adds KK to VX.
+                (0x8, _, _, 0x0) => self.ld_r(x, y),          // 8XY0 | Sets VX to the value of VY.
+                (0x8, _, _, 0x1) => self.or(x, y),            // 8XY1 | Sets VX to VX or VY.
+                (0x8, _, _, 0x2) => self.and(x, y),           // 8XY2 | Sets VX to VX and VY.
+                (0x8, _, _, 0x3) => self.xor(x, y),           // 8XY3 | Sets VX to VX xor VY.
                 (0x8, _, _, 0x4) => self.add(x, y), // 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
                 (0x8, _, _, 0x5) => self.sub(x, y), // 8XY5 | VY is subtracted from VX. VF is set to 0 whedin there's a borrow, and 1 when there isn't.
-                (0x8, _, _, 0x6) => self.shift_right(x), // 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.
-                (0x8, _, _, 0x7) => self._todo(), // 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+                (0x8, _, _, 0x6) => self.shift_right(x), // 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.,y
+                (0x8, _, _, 0x7) => self.sub(y, x), // 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
                 (0x8, _, _, 0xE) => self.shift_left(x), // 8XYE | Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift
-                (0x9, _, _, 0x0) => self._todo(), // 9XY0 | Skips the next instruction if VX doesn't equal VY.
-                (0xA, _, _, _) => self._todo(),   // ANNN | Sets I to the address NNN.
-                (0xB, _, _, _) => self._todo(),   // BNNN | Jumps to the address NNN plus V0.
-                (0xC, _, _, _) => self._todo(), // CXKK | Sets VX to the result of a bitwise and operation on a random number and KK.
+                (0x9, _, _, 0x0) => self.skip_if_not_equal(x, y), // 9XY0 | Skips the next instruction if VX doesn't equal VY.
+                (0xA, _, _, _) => self.ld_i(addr), // ANNN | Sets I to the address NNN.
+                (0xB, _, _, _) => self.jp_v0(addr), // BNNN | Jumps to the address NNN plus V0.
+                (0xC, _, _, _) => self.rnd(x, kk), // CXKK | Sets VX to the result of a bitwise and operation on a random number and KK.
                 (0xD, _, _, _) => self._todo(), // DXYN | Sprites stored in memory at location in index register (I), 8bits wide. Wraps around the screen. If when drawn, clears a pixel, register VF is set to 1 otherwise it is zero. All drawing is XOR drawing (i.e. it toggles the screen pixels). Sprites are drawn starting at position VX, VY. N is the number of 8bit rows that need to be drawn. If N is greater than 1, second line continues at position VX, VY+1, and so on.
                 (0xE, _, 0x9, 0xE) => self._todo(), // EX9E | Skips the next instruction if the key stored in VX is pressed.
                 (0xE, _, 0xA, 0x1) => self._todo(), // EXA1 | Skips the next instruction if the key stored in VX isn't pressed.
-                (0xF, _, 0x0, 0x7) => self._todo(), // FX07 | Sets VX to the value of the delay timer.
+                (0xF, _, 0x0, 0x7) => self.ld_dt(x), // FX07 | Sets VX to the value of the delay timer.
                 (0xF, _, 0x0, 0xA) => self._todo(), // FX0A | A key press is awaited, and then stored in VX.
-                (0xF, _, 0x1, 0x5) => self._todo(), // FX15 | Sets the delay timer to VX.
-                (0xF, _, 0x1, 0x8) => self._todo(), // FX18 | Sets the sound timer to VX.
-                (0xF, _, 0x1, 0xE) => self._todo(), // FX1E | Adds VX to I.
+                (0xF, _, 0x1, 0x5) => self.ld_dt_v(x), // FX15 | Sets the delay timer to VX.
+                (0xF, _, 0x1, 0x8) => self.ld_st_v(x), // FX18 | Sets the sound timer to VX.
+                (0xF, _, 0x1, 0xE) => self.ld_i_v(x), // FX1E | Adds VX to I.
                 (0xF, _, 0x2, 0x9) => self._todo(), // FX29 | Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) ar
                 (0xF, _, 0x3, 0x3) => self._todo(), // FX33 | Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
-                (0xF, _, 0x5, 0x5) => self._todo(), // FX55 | Stores V0 to VX in memory starting at address I.
-                (0xF, _, 0x6, 0x5) => self._todo(), // FX65 | Fills V0 to VX with values from memory starting at address I.
+                (0xF, _, 0x5, 0x5) => self.ld_v_i(x), // FX55 | Stores V0 to VX in memory starting at address I.
+                (0xF, _, 0x6, 0x5) => self.ld_i_v(x), // FX65 | Fills V0 to VX with values from memory starting at address I.
                 _ => panic!("Unimplemented opcode: {:04X?}", opcode), // _ | Panic.
             }
             println!(
@@ -287,7 +288,7 @@ impl Cpu {
 
     fn skip_if_equal(&mut self, x: usize, kk: usize) {
         println!(
-            "  SKIP\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSKIP\n",
+            "    SE\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSKIP\n",
             self.pointer,
             self.i,
             self.counter,
@@ -301,7 +302,7 @@ impl Cpu {
 
     fn skip_if_not_equal(&mut self, x: usize, kk: usize) {
         println!(
-            "  SKIP\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSKIP\n",
+            "   SNE\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSKIP\n",
             self.pointer,
             self.i,
             self.counter,
@@ -315,7 +316,7 @@ impl Cpu {
 
     fn add(&mut self, x: usize, y: usize) {
         println!(
-            "ADD\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD\n",
+            "   ADD\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD\n",
             self.pointer,
             self.i,
             self.counter,
@@ -328,9 +329,22 @@ impl Cpu {
         );
     }
 
+    fn add_kk(&mut self, x: usize, kk: usize) {
+        println!(
+            "   ADD\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tADD\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        (self.registers[x], self.registers[STATUS_REGISTER]) =
+            tuple_as!((self.registers[x] as u8).overflowing_add(kk as u8), usize);
+    }
+
     fn sub(&mut self, x: usize, y: usize) {
         println!(
-            "SUB\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSUB\n",
+            "   SUB\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSUB\n",
             self.pointer,
             self.i,
             self.counter,
@@ -344,6 +358,14 @@ impl Cpu {
     }
 
     fn shift_left(&mut self, x: usize) {
+        println!(
+            "   SHL\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSHIFT\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
         (self.registers[x], self.registers[STATUS_REGISTER]) = tuple_as!(
             (
                 (self.registers[x] as u8) << 1,
@@ -354,6 +376,14 @@ impl Cpu {
     }
 
     fn shift_right(&mut self, x: usize) {
+        println!(
+            "   SHR\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSHIFT\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
         (self.registers[x], self.registers[STATUS_REGISTER]) = tuple_as!(
             (
                 (self.registers[x] as u8) >> 1,
@@ -361,6 +391,174 @@ impl Cpu {
             ),
             usize
         );
+    }
+
+    fn ld_kk(&mut self, x: usize, kk: usize) {
+        println!(
+            "   SET\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSET\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = kk;
+    }
+
+    fn ld_i(&mut self, addr: usize) {
+        println!(
+            "   SETI\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSET\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.i = addr;
+    }
+
+    fn ld_r(&mut self, x: usize, y: usize) {
+        println!(
+            "   LDR\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSET\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = self.registers[y];
+    }
+
+    fn ld_v(&mut self, x: usize, y: usize) {
+        println!(
+            "   LDR\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSET\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = self.stack[y];
+    }
+
+    fn ld_i_v(&mut self, x: usize) {
+        println!(
+            "   LDI\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSET\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.i = self.stack[x];
+    }
+
+    fn ld_v_i(&mut self, x: usize) {
+        println!(
+            "   LDI\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSET\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.stack[x] = self.i;
+    }
+
+    fn or(&mut self, x: usize, y: usize) {
+        println!(
+            "   OR\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tOR\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = self.registers[x] | self.registers[y];
+    }
+
+    fn xor(&mut self, x: usize, y: usize) {
+        println!(
+            "   XOR\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tXOR\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = self.registers[x] ^ self.registers[y];
+    }
+
+    fn and(&mut self, x: usize, y: usize) {
+        println!(
+            "   AND\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tAND\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = self.registers[x] & self.registers[y];
+    }
+
+    fn ld_dt(&mut self, x: usize) {
+        println!(
+            "   LDDT\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tLDDT\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = self.delay;
+    }
+
+    fn ld_dt_v(&mut self, x: usize) {
+        println!(
+            "   LDDTV\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tLDDT\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.delay = self.stack[x];
+    }
+
+    fn ld_st_v(&mut self, x: usize) {
+        println!(
+            "   LDST\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tLDST\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.sound = self.registers[x];
+    }
+
+    fn jp_v0(&mut self, x: usize) {
+        println!(
+            "   JPV0\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tJPV0\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.pointer = self.registers[x];
+    }
+
+    fn rnd(&mut self, x: usize, y: usize) {
+        println!(
+            "   RND\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRND\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        self.registers[x] = rand::random::<usize>() & self.registers[y];
     }
 }
 

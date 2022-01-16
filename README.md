@@ -1,6 +1,9 @@
 # chip implements [CHIP-8 Virtual Machine - wikipedia](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
 
-chip was developed using
+try chip games in the browser here:
+- [Octo: Chip-8 in the Browser](http://johnearnest.github.io/Octo/)
+
+chip was developed using:
 
 - Rust In Action chapter 5 program to implement initial cpu, run, call, and opcodes for `[0000,00EE,2NNN,8XY4,_]`.
 - [CHIP-8 Virtual Machine Description [wikipedia](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
@@ -11,6 +14,10 @@ chip was developed using
 - [Mastering SuperChip](http://johnearnest.github.io/Octo/docs/SuperChip.html)
 - [Chip-8 Design Specification - Columbia University](http://www.cs.columbia.edu/~sedwards/classes/2016/4840-spring/designs/Chip8.pdf)
 - [CHIP-8 virtual machine specification](https://tonisagrista.com/blog/2021/chip8-spec/)
+- [An Easy Programming System (1978)](https://archive.org/details/byte-magazine-1978-12/page/n109/mode/2up)
+- [Dream 6800 Archive Site(1978)](http://www.mjbauer.biz/DREAM6800.htm)
+- todo: understand [Verilog Implementation](https://bitbucket.org/csoren/fpga-chip8/src/develop/)
+
 ## Setup
 
 - install rust >=1.59 (or enable nightly/feature(destructuring_assignment))
@@ -28,7 +35,7 @@ The symbols in the Opcode column of the Opcode table can be interpreted as follo
 | Symbol | Explanation                                                      |
 | ------ | ---------------------------------------------------------------- |
 | NNN    | address                                                          |
-| NN     | 8-bit constant                                                   |
+| KK     | 8-bit constant                                                   |
 | N      | 4-bit constant                                                   |
 | X      | 4-bit register identifier                                        |
 | Y      | 4-bit register identifier                                        |
