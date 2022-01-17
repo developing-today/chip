@@ -104,7 +104,7 @@ Of these opcodes, **1/35** are currently implemented in chip
     |             | FX33   | Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other      | words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)                                          |
     |             | FX55   | Stores V0 to VX in memory starting at address I.</sup>                                                                                                                                                         |
     |             | FX65   | Fills V0 to VX with values from memory starting at address I.</sup>                                                                                                                                            |
-    | 🌱          | \_     | Panic.                                                                                                                                                                                                         |
+    | 🌱          | _     | Panic.                                                                                                                                                                                                         |
 
 More information about CHIP-8 can be found on [Wikipedia](https://en.wikipedia.org/wiki/CHIP-8).
 
