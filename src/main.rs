@@ -193,7 +193,7 @@ impl Cpu {
                 (0x1, _, _, _) => self.jump(addr),    // 1NNN | Jumps to address NNN.
                 (0x2, _, _, _) => self.call(addr),    // 2NNN | Calls subroutine at address NNN.
                 (0x3, _, _, _) => self.skip_if_equal(x, kk), // 3XKK | Skips the next instruction if VX equals KK.
-                (0x4, _, _, _) => self.skip_if_not_equal(x, y), // 4XKK | Skips the next instruction if VX doesn't equal KK.
+                (0x4, _, _, _) => self.skip_if_not_equal(x, kk), // 4XKK | Skips the next instruction if VX doesn't equal KK.
                 (0x5, _, _, 0x0) => self.skip_if_equal(x, y), // 5XY0 | Skips the next instruction if VX equals VY.
                 (0x6, _, _, _) => self.ld_kk(x, kk),          // 6XKK | Sets VX to KK.
                 (0x7, _, _, _) => self.add_kk(x, kk),         // 7XKK | Adds KK to VX.
@@ -204,7 +204,7 @@ impl Cpu {
                 (0x8, _, _, 0x4) => self.add(x, y), // 8XY4 | Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
                 (0x8, _, _, 0x5) => self.sub(x, y), // 8XY5 | VY is subtracted from VX. VF is set to 0 whedin there's a borrow, and 1 when there isn't.
                 (0x8, _, _, 0x6) => self.shift_right(x), // 8XY6 | Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.,y
-                (0x8, _, _, 0x7) => self.sub(y, x), // 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+                (0x8, _, _, 0x7) => self.subn(x, y), // 8XY7 | Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
                 (0x8, _, _, 0xE) => self.shift_left(x), // 8XYE | Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift
                 (0x9, _, _, 0x0) => self.skip_if_not_equal(x, y), // 9XY0 | Skips the next instruction if VX doesn't equal VY.
                 (0xA, _, _, _) => self.ld_i(addr), // ANNN | Sets I to the address NNN.
@@ -353,6 +353,21 @@ impl Cpu {
         );
         (self.registers[x], self.registers[STATUS_REGISTER]) = tuple_as!(
             (self.registers[x] as u8).overflowing_sub(self.registers[y] as u8),
+            usize
+        );
+    }
+
+    fn subn(&mut self, x: usize, y: usize) {
+        println!(
+            "   SUB\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tSUB\n",
+            self.pointer,
+            self.i,
+            self.counter,
+            &self.registers[0..16],
+            &self.stack[0..16]
+        );
+        (self.registers[x], self.registers[STATUS_REGISTER]) = tuple_as!(
+            (self.registers[y] as u8).overflowing_sub(self.registers[x] as u8),
             usize
         );
     }

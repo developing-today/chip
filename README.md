@@ -22,6 +22,20 @@ chip was developed using:
 
 - install rust >=1.59 (or enable nightly/feature(destructuring_assignment))
 - clone repository
+- cd into repo
+- for bevy and fast compiles until a separate crate, the following is needed:
+          sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libwayland-dev libxkbcommon-dev
+          sudo apt install mesa-vulkan-drivers
+          sudo apt install lld
+          sudo apt install clang
+          cargo install -f cargo-binutils
+          rustup component add llvm-tools-preview
+    - see [bevy book](https://bevyengine.org/learn/book/getting-started/setup/) for specific instructions
+    - this install was for an ubtunu laptop with nvidia gtx. i am sure some of these are unneeded.
+    - in order to use default stable rust and g++/the default linker,
+      - you may need to modify or delete `./.cargo/config.toml`
+    - on release you must disable '`dynamic`' feature of `bevy` in `Cargo.toml`
 - cargo run
 
 ## Opcodes
