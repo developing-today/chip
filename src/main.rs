@@ -1,3 +1,12 @@
+use bevy::prelude::*; //, utils::HashSet}
+use bevy_prototype_lyon::prelude::*;
+use rand::Rng; // prelude::SliceRandom,
+               // use std::{
+               //     env::VarError,
+               //     io::{self, BufRead, BufReader},
+               //     process::Stdio,
+               // };
+
 macro_rules! tuple_as {
     ($t: expr, $ty: ident) => {{
         let (a, b) = $t;
@@ -627,4 +636,175 @@ fn main() {
 
     println!("{}", cpu.registers[0]);
     assert_eq!(cpu.registers[0], 42);
+
+    cpu.memory = [0; 4096];
+
+    const SCREEN_X: usize = 64;
+    const SCREEN_Y: usize = 32;
+    #[derive(Debug, Component)]
+    struct Screen;
+
+    #[derive(Component)]
+    struct Pixels([u8; SCREEN_X * SCREEN_Y]);
+
+    fn add_screen(mut commands: Commands) {
+        commands
+            .spawn()
+            .insert(Screen)
+            .insert(Pixels([0; SCREEN_X * SCREEN_Y]));
+    }
+    fn hello_world() {
+        println!(
+            "hello world!" // {:?}",
+                           // Screen {
+                           //     px: [0; SCREEN_X * SCREEN_Y]
+                           // }
+                           // .px
+                           // .len()
+        );
+    }
+    App::new().add_system(hello_world).run();
+    struct GreetTimer(Timer);
+
+    fn greet_pixels(
+        time: Res<Time>,
+        mut timer: ResMut<GreetTimer>,
+        query: Query<&Pixels, With<Screen>>,
+    ) {
+        // update our timer with the time elapsed since the last update
+        // if that caused the timer to finish, we say hello to everyone
+        if timer.0.tick(time.delta()).just_finished() {
+            for px in query.iter() {
+                for i in px.0.iter() {
+                    println!("hello px:{}!", i);
+                }
+            }
+        }
+    }
+    App::new()
+        .insert_resource(Msaa { samples: 4 })
+        .add_plugins(DefaultPlugins)
+        .add_plugin(ShapePlugin)
+        .insert_resource(GreetTimer(Timer::from_seconds(2.0, true)))
+        .add_startup_system(add_screen)
+        .add_startup_system(setup_system)
+        .add_system(greet_pixels)
+        // .add_system(hello_world)
+        .run();
+}
+
+fn setup_system(mut commands: Commands) {
+    let shape = shapes::RegularPolygon {
+        sides: 4,
+        feature: shapes::RegularPolygonFeature::Radius(25.0),
+        ..shapes::RegularPolygon::default()
+    };
+
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(GeometryBuilder::build_as(
+        &shape,
+        DrawMode::Outlined {
+            fill_mode: FillMode::color(Color::CYAN),
+            outline_mode: StrokeMode::new(Color::BLACK, 10.0),
+        },
+        Transform::default(),
+    ));
+}
+fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // Load contributors from the git history log or use default values from
+    // the constant array. Contributors must be unique, so they are stored in a HashSet
+    let contribs = contributors().unwrap_or_else(|_| {
+        CONTRIBUTORS_LIST
+            .iter()
+            .map(|name| name.to_string())
+            .collect()
+    });
+
+    let texture_handle = asset_server.load("branding/icon.png");
+
+    let mut contributor_selection = ContributorSelection {
+        order: vec![],
+        idx: 0,
+    };
+
+    let mut rnd = rand::thread_rng();
+
+    for name in contribs {
+        let pos = (rnd.gen_range(-400.0..400.0), rnd.gen_range(0.0..400.0));
+        let dir = rnd.gen_range(-1.0..1.0);
+        let velocity = Vec3::new(dir * 500.0, 0.0, 0.0);
+        let hue = rnd.gen_range(0.0..=360.0);
+
+        // some sprites should be flipped
+        let flipped = rnd.gen_bool(0.5);
+
+        let transform = Transform::from_xyz(pos.0, pos.1, 0.0);
+
+        let entity = commands
+            .spawn()
+            .insert_bundle((
+                Contributor { hue },
+                Velocity {
+                    translation: velocity,
+                    rotation: -dir * 5.0,
+                },
+            ))
+            .insert_bundle(SpriteBundle {
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(1.0, 1.0) * SPRITE_SIZE),
+                    color: Color::hsla(hue, SATURATION_DESELECTED, LIGHTNESS_DESELECTED, ALPHA),
+                    flip_x: flipped,
+                    ..Default::default()
+                },
+                texture: texture_handle.clone(),
+                transform,
+                ..Default::default()
+            })
+            .id();
+
+        contributor_selection.order.push((name, entity));
+    }
+
+    contributor_selection.order.shuffle(&mut rnd);
+
+    commands.insert_resource(contributor_selection);
+}
+
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(UiCameraBundle::default());
+
+    commands.spawn_bundle((SelectTimer, Timer::from_seconds(SHOWCASE_TIMER_SECS, true)));
+
+    commands
+        .spawn()
+        .insert(ContributorDisplay)
+        .insert_bundle(TextBundle {
+            style: Style {
+                align_self: AlignSelf::FlexEnd,
+                ..Default::default()
+            },
+            text: Text {
+                sections: vec![
+                    TextSection {
+                        value: "Contributor showcase".to_string(),
+                        style: TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 60.0,
+                            color: Color::WHITE,
+                        },
+                    },
+                    TextSection {
+                        value: "".to_string(),
+                        style: TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 60.0,
+                            color: Color::WHITE,
+                        },
+                    },
+                ],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
 }
