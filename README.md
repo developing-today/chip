@@ -17,11 +17,24 @@ chip was developed using:
 - [An Easy Programming System (1978)](https://archive.org/details/byte-magazine-1978-12/page/n109/mode/2up)
 - [Dream 6800 Archive Site (1978)](http://www.mjbauer.biz/DREAM6800.htm)
 - todo: understand [Verilog Implementation](https://bitbucket.org/csoren/fpga-chip8/src/develop/)
-
+https://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html
+https://bevyengine.org/learn/book
+https://deterministic.space/bevy-labels.html
+https://web.archive.org/web/20160514030144/http://chip8.com/downloads/Chip-8%20Pack.zip
+https://arzg.github.io/lang/19/
+https://createlang.rs/
+https://adriann.github.io/rust_parser.html
+https://domenicquirl.github.io/blog/parsing-basics/
+https://github.com/jauhien/iron-kaleidoscope
+https://github.com/cdisselkoen/llvm-ir/blob/main/tests/basic_tests.rs\
+https://crates.io/crates/nom
+https://blog.adamchalmers.com/nom-chars/
+https://github.com/clap-rs/clap
+https://bevy-cheatbook.github.io/
 ## Setup
 
 - install rust >=1.59 (or enable nightly/feature(destructuring_assignment))
-- clone repository
+- clone repository~
 - cd into repo
 - for bevy and fast compiles until a separate crate, the following is needed:
 

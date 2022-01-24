@@ -1,11 +1,25 @@
-use bevy::prelude::*; //, utils::HashSet}
-use bevy_prototype_lyon::prelude::*;
-use rand::Rng; // prelude::SliceRandom,
-               // use std::{
-               //     env::VarError,
-               //     io::{self, BufRead, BufReader},
-               //     process::Stdio,
-               // };
+#![feature(fn_traits)]
+#![feature(unsized_locals)]
+
+use bevy::{
+    core::{Time, Timer},
+    prelude::{
+        App, Color, Commands, Component, Entity, Msaa, Or, OrthographicCameraBundle, Query, Res,
+        ResMut, Transform, With, Without,
+    },
+    DefaultPlugins,
+};
+use bevy_prototype_lyon::{
+    plugin::ShapePlugin,
+    prelude::{DrawMode, FillMode, GeometryBuilder, StrokeMode},
+    shapes,
+};
+
+const SCREEN_X: usize = 64;
+const SCREEN_Y: usize = 32;
+const PIXELS: usize = SCREEN_X * SCREEN_Y;
+const HALF_X: usize = SCREEN_X / 2;
+const HALF_Y: usize = SCREEN_Y / 2;
 
 macro_rules! tuple_as {
     ($t: expr, $ty: ident) => {{
@@ -29,7 +43,7 @@ macro_rules! tuple_as {
 /// 0xF is the last register and is used as the carry flag
 const STATUS_REGISTER: usize = 0xF;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Component)]
 struct Cpu {
     /// programs should not use 0xF, the original last register, as a general purpose register
     /// STATUS_REGISTER is used as the carry flag and is the original last register, 0xF
@@ -55,6 +69,7 @@ struct Cpu {
     delay: usize,
     /// diverges from the spec, originally u8, usize allows for rust indexing
     sound: usize,
+    screen: [bool; PIXELS],
 }
 
 /**
@@ -159,6 +174,7 @@ impl Cpu {
     fn read_opcode(&self) -> (usize, usize) {
         (self.memory[self.counter], self.memory[self.counter + 1]) // combine the two bytes
     }
+    // todo make run loop into system
     fn run(&mut self) {
         println!(
             "\n\n\n   RUN\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tRUN",
@@ -244,7 +260,7 @@ impl Cpu {
         }
     }
     fn _todo(&mut self) -> ! {
-        panic!("[TODO] Unimplemented opcode: {:04X?}", self.read_opcode());
+        todo!("[TODO] Unimplemented opcode: {:04X?}", self.read_opcode());
     }
     fn _deprecated(&mut self) -> ! {
         panic!(
@@ -596,6 +612,7 @@ fn main() {
         i: 0,
         delay: 0,
         sound: 0,
+        screen: [false; PIXELS],
     };
 
     cpu.registers[0] = 42;
@@ -639,172 +656,149 @@ fn main() {
 
     cpu.memory = [0; 4096];
 
-    const SCREEN_X: usize = 64;
-    const SCREEN_Y: usize = 32;
-    #[derive(Debug, Component)]
-    struct Screen;
-
-    #[derive(Component)]
-    struct Pixels([u8; SCREEN_X * SCREEN_Y]);
-
-    fn add_screen(mut commands: Commands) {
-        commands
-            .spawn()
-            .insert(Screen)
-            .insert(Pixels([0; SCREEN_X * SCREEN_Y]));
-    }
-    fn hello_world() {
-        println!(
-            "hello world!" // {:?}",
-                           // Screen {
-                           //     px: [0; SCREEN_X * SCREEN_Y]
-                           // }
-                           // .px
-                           // .len()
-        );
-    }
-    App::new().add_system(hello_world).run();
-    struct GreetTimer(Timer);
-
-    fn greet_pixels(
-        time: Res<Time>,
-        mut timer: ResMut<GreetTimer>,
-        query: Query<&Pixels, With<Screen>>,
-    ) {
-        // update our timer with the time elapsed since the last update
-        // if that caused the timer to finish, we say hello to everyone
-        if timer.0.tick(time.delta()).just_finished() {
-            for px in query.iter() {
-                for i in px.0.iter() {
-                    println!("hello px:{}!", i);
-                }
-            }
-        }
-    }
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(ShapePlugin)
-        .insert_resource(GreetTimer(Timer::from_seconds(2.0, true)))
-        .add_startup_system(add_screen)
         .add_startup_system(setup_system)
-        .add_system(greet_pixels)
-        // .add_system(hello_world)
+        .insert_resource(GreetTimer(Timer::from_seconds(2.0, true)))
+        .add_system(pixels_greet)
+        .add_system(pixels_change_color)
+        // .add_system(pixels_disable)
+        // .add_system(pixels_on)
+        // .add_system(pixels_off)
         .run();
 }
+const PIXEL_X: usize = 10;
+const PIXEL_Y: usize = 10;
+struct GreetTimer(Timer);
+
+#[derive(Debug, Clone, Copy, Component)]
+struct Pixels([Entity; PIXELS]);
+
+#[derive(Debug, Clone, Copy, Component)]
+struct Pixel(Entity, usize);
+#[derive(Debug, Clone, Copy, Component)]
+struct Disabled();
 
 fn setup_system(mut commands: Commands) {
+    let cpu = commands
+        .spawn()
+        .insert(Cpu {
+            registers: [0; usize::BITS as usize],
+            stack: [0; usize::BITS as usize * 4],
+            memory: [0; 4096],
+            counter: 0,
+            pointer: 0,
+            i: 0,
+            delay: 0,
+            sound: 0,
+            screen: [false; PIXELS],
+        })
+        .id();
+
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+
     let shape = shapes::RegularPolygon {
         sides: 4,
-        feature: shapes::RegularPolygonFeature::Radius(25.0),
+        feature: shapes::RegularPolygonFeature::Radius(5.0),
         ..shapes::RegularPolygon::default()
     };
-
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(GeometryBuilder::build_as(
-        &shape,
-        DrawMode::Outlined {
-            fill_mode: FillMode::color(Color::CYAN),
-            outline_mode: StrokeMode::new(Color::BLACK, 10.0),
-        },
-        Transform::default(),
-    ));
-}
-fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // Load contributors from the git history log or use default values from
-    // the constant array. Contributors must be unique, so they are stored in a HashSet
-    let contribs = contributors().unwrap_or_else(|_| {
-        CONTRIBUTORS_LIST
-            .iter()
-            .map(|name| name.to_string())
-            .collect()
-    });
-
-    let texture_handle = asset_server.load("branding/icon.png");
-
-    let mut contributor_selection = ContributorSelection {
-        order: vec![],
-        idx: 0,
-    };
-
-    let mut rnd = rand::thread_rng();
-
-    for name in contribs {
-        let pos = (rnd.gen_range(-400.0..400.0), rnd.gen_range(0.0..400.0));
-        let dir = rnd.gen_range(-1.0..1.0);
-        let velocity = Vec3::new(dir * 500.0, 0.0, 0.0);
-        let hue = rnd.gen_range(0.0..=360.0);
-
-        // some sprites should be flipped
-        let flipped = rnd.gen_bool(0.5);
-
-        let transform = Transform::from_xyz(pos.0, pos.1, 0.0);
-
-        let entity = commands
-            .spawn()
-            .insert_bundle((
-                Contributor { hue },
-                Velocity {
-                    translation: velocity,
-                    rotation: -dir * 5.0,
+    for i in 0..PIXELS {
+        let pixel = commands
+            .spawn_bundle(GeometryBuilder::build_as(
+                &shape,
+                DrawMode::Outlined {
+                    fill_mode: FillMode::color(Color::CYAN),
+                    outline_mode: StrokeMode::new(Color::BLACK, 5.0),
                 },
+                std::ops::Fn::call(&Transform::from_xyz, xyz_from_i(i, 0)),
             ))
-            .insert_bundle(SpriteBundle {
-                sprite: Sprite {
-                    custom_size: Some(Vec2::new(1.0, 1.0) * SPRITE_SIZE),
-                    color: Color::hsla(hue, SATURATION_DESELECTED, LIGHTNESS_DESELECTED, ALPHA),
-                    flip_x: flipped,
-                    ..Default::default()
-                },
-                texture: texture_handle.clone(),
-                transform,
-                ..Default::default()
-            })
             .id();
 
-        contributor_selection.order.push((name, entity));
+        commands.entity(cpu).insert(Pixel(pixel, i));
     }
-
-    contributor_selection.order.shuffle(&mut rnd);
-
-    commands.insert_resource(contributor_selection);
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(UiCameraBundle::default());
+fn div_rem<T: std::ops::Div<Output = T> + std::ops::Rem<Output = T> + Copy>(x: T, y: T) -> (T, T) {
+    let quot = x / y;
+    let rem = x % y;
+    (quot, rem)
+}
 
-    commands.spawn_bundle((SelectTimer, Timer::from_seconds(SHOWCASE_TIMER_SECS, true)));
+fn xyz_from_i(i: usize, z: usize) -> (f32, f32, f32) {
+    let (y, x) = div_rem(i as isize, SCREEN_X as isize);
+    println!("{:?},{:?}", x, y);
+    let xyz = (
+        ((x - HALF_X as isize) * PIXEL_X as isize) as f32,
+        ((-y + HALF_Y as isize) * PIXEL_Y as isize) as f32,
+        z as f32,
+    );
+    println!("{:?}", xyz);
+    xyz
+}
 
-    commands
-        .spawn()
-        .insert(ContributorDisplay)
-        .insert_bundle(TextBundle {
-            style: Style {
-                align_self: AlignSelf::FlexEnd,
-                ..Default::default()
-            },
-            text: Text {
-                sections: vec![
-                    TextSection {
-                        value: "Contributor showcase".to_string(),
-                        style: TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 60.0,
-                            color: Color::WHITE,
-                        },
-                    },
-                    TextSection {
-                        value: "".to_string(),
-                        style: TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 60.0,
-                            color: Color::WHITE,
-                        },
-                    },
-                ],
-                ..Default::default()
-            },
-            ..Default::default()
-        });
+fn pixels_greet(time: Res<Time>, mut timer: ResMut<GreetTimer>, query: Query<&Pixel>) {
+    // update our timer with the time elapsed since the last update
+    // if that caused the timer to finish, we say hello to everyone
+    if timer.0.tick(time.delta()).just_finished() {
+        for px in query.iter() {
+            println!("hello px:{:?}!", px);
+        }
+    }
+}
+
+fn pixels_on(mut commands: Commands, query: Query<(&Pixel, &Cpu)>) {
+    for (pixel, cpu) in query.iter() {
+        println!("{:?},{:?}", pixel, cpu.screen[pixel.1]);
+        if cpu.screen[pixel.1] {
+            commands.entity(pixel.0).remove::<Disabled>();
+        }
+    }
+}
+
+// todoL fix, look into Changed<> and similar, fully integrate bevy and chip8
+fn pixels_off(mut commands: Commands, query: Query<(&Pixel, &Cpu)>) {
+    for (pixel, cpu) in query.iter() {
+        println!("{:?},{:?}", pixel, cpu.screen[pixel.1]);
+        if !cpu.screen[pixel.1] {
+            commands.entity(pixel.0).insert(Disabled());
+        }
+    }
+}
+
+fn pixels_disable(mut query: Query<&mut DrawMode, (With<Pixel>, With<Disabled>)>) {
+    println!("{:?}", query.iter().count());
+    for mut draw_mode in query.iter_mut() {
+        // if color not black
+        match *draw_mode {
+            DrawMode::Outlined {
+                ref mut fill_mode,
+                ref mut outline_mode,
+            } => {
+                fill_mode.color = Color::BLACK;
+                outline_mode.color = Color::BLACK;
+            }
+            _ => (),
+        }
+    }
+}
+
+fn pixels_change_color(
+    mut query: Query<&mut DrawMode, (With<Pixel>, Without<Disabled>)>,
+    time: Res<Time>,
+) {
+    let hue = ((time.time_since_startup().as_millis() / 1000) % 360) as f32;
+    println!("{:?}", hue);
+    for mut draw_mode in query.iter_mut() {
+        // if color not black
+        if let DrawMode::Outlined {
+            ref mut fill_mode,
+            ref mut outline_mode,
+        } = *draw_mode
+        {
+            fill_mode.color = Color::hsl(hue, 1.0, 0.5);
+            outline_mode.color = Color::BLACK;
+        }
+    }
 }
