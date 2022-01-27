@@ -32,5 +32,29 @@
         "titleBar.inactiveBackground": "#42b88399",
         "titleBar.inactiveForeground": "#15202b99"
     },
-    "peacock.color": "#42b883"
+    "peacock.color": "#42b883",
+    "cSpell.words": [
+        "ADDI",
+        "ADDKK",
+        "CXKK",
+        "DRWN",
+        "LDAND",
+        "LDDT",
+        "LDDTV",
+        "LDDTX",
+        "LDKK",
+        "LDOR",
+        "LDST",
+        "LDXI",
+        "LDXOR",
+        "Msaa",
+        "RNDKK",
+        "SEKK",
+        "SETI",
+        "SKNP",
+        "SNEKK",
+        "subn",
+        "SUBN",
+        "whedin"
+    ]
 }
