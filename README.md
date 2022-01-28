@@ -18,7 +18,7 @@ chip was developed using:
 - [Dream 6800 Archive Site (1978)](http://www.mjbauer.biz/DREAM6800.htm)
 - todo: understand [Verilog Implementation](https://bitbucket.org/csoren/fpga-chip8/src/develop/)
 https://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html
-https://bevyengine.org/learn/book
+https://bevyengine.org/learn/book <- simple, new one should be more detailed
 https://deterministic.space/bevy-labels.html
 https://web.archive.org/web/20160514030144/http://chip8.com/downloads/Chip-8%20Pack.zip
 https://arzg.github.io/lang/19/
@@ -31,6 +31,18 @@ https://crates.io/crates/nom
 https://blog.adamchalmers.com/nom-chars/
 https://github.com/clap-rs/clap
 https://bevy-cheatbook.github.io/
+https://docs.rs/bevy/0.6.0/bevy/
+
+interesting books
+rust in Action
+crafting interpreters http://craftinginterpreters.com/contents.html
+rust for rustaceans
+http://cliffle.com/p/dangerust/
+https://docs.rust-embedded.org/book/intro/no-std.html
+programming rust 2021
+the rust book
+https://doc.rust-lang.org/book/
+
 ## Setup
 
 - install rust >=1.59 (or enable nightly/feature(destructuring_assignment))

@@ -53,6 +53,128 @@ struct Enabled();
 struct Off();
 #[derive(Debug, Clone, Copy, Component)]
 struct On();
+fn main() {
+    App::new()
+        .insert_resource(Msaa { samples: 4 })
+        .add_plugins(DefaultPlugins)
+        .add_plugin(ShapePlugin)
+        .add_startup_system(setup_system)
+        .insert_resource(CpuTimer(Timer::from_seconds(0.1, true)))
+        .insert_resource(AppTimer(Timer::from_seconds(1.0 / 60.0, true)))
+        .add_system(pixels_change_color)
+        .add_system(pixels_disable)
+        .add_system(cpu_cycle)
+        .run();
+}
+fn setup_system(mut commands: Commands) {
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+
+    let shape = shapes::RegularPolygon {
+        sides: 4,
+        feature: shapes::RegularPolygonFeature::Radius(5.0),
+        ..shapes::RegularPolygon::default()
+    };
+
+    let empty = commands.spawn().id();
+    commands.entity(empty).despawn();
+    let mut screen = [Pixel(empty, false); PIXELS];
+
+    for i in 0..screen.len() {
+        screen[i].0 = commands
+            .spawn_bundle(GeometryBuilder::build_as(
+                &shape,
+                DrawMode::Outlined {
+                    fill_mode: FillMode::color(Color::CYAN),
+                    outline_mode: StrokeMode::new(Color::BLACK, 5.0),
+                },
+                ops::Fn::call(&Transform::from_xyz, xyz_from_i(i, 0)),
+            ))
+            .id();
+    }
+
+    commands
+        .spawn()
+        .insert(Cpu {
+            registers: default_registers(),
+            stack: [0; usize::BITS as usize * 4],
+            memory: default_memory(),
+            counter: 0,
+            pointer: 0,
+            i: 0,
+            delay: 0,
+            sound: 0,
+        })
+        .insert(Screen(screen));
+}
+fn div_rem<T: ops::Div<Output = T> + ops::Rem<Output = T> + Copy>(x: T, y: T) -> (T, T) {
+    let quot = x / y;
+    let rem = x % y;
+    (quot, rem)
+}
+// todo types and from/to
+fn xyz_from_i(i: usize, z: usize) -> (f32, f32, f32) {
+    let (y, x) = div_rem(i as isize, SCREEN_X as isize);
+    // println!("{:?},{:?}", x, y);
+    let xyz = (
+        ((x - HALF_X as isize) * PIXEL_X as isize) as f32,
+        ((-y + HALF_Y as isize) * PIXEL_Y as isize) as f32,
+        z as f32,
+    );
+    // println!("{:?}", xyz);
+    xyz
+}
+fn cpu_cycle(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut timer: ResMut<CpuTimer>,
+    mut query: Query<(&mut Cpu, &mut Screen)>,
+) {
+    if timer.0.tick(time.delta()).just_finished() {
+        let (mut cpu, mut screen) = query.single_mut();
+        cpu.cycle(&mut commands, &mut screen);
+    }
+}
+fn pixels_disable(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut DrawMode), (Without<Off>, Added<Disabled>)>,
+) {
+    // println!("disable:{:?}", query.iter().count());
+    for (id, mut draw_mode) in query.iter_mut() {
+        // if color not black
+        match *draw_mode {
+            DrawMode::Outlined {
+                ref mut fill_mode,
+                ref mut outline_mode,
+            } => {
+                fill_mode.color = Color::BLACK;
+                outline_mode.color = Color::BLACK;
+            }
+            _ => (),
+        }
+        commands.entity(id).remove::<On>();
+        commands.entity(id).insert(Off());
+    }
+}
+fn pixels_change_color(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut DrawMode), Without<Disabled>>,
+) {
+    let hue = ((time.time_since_startup().as_millis() / 450) % 360) as f32;
+    for (id, mut draw_mode) in query.iter_mut() {
+        // println!("hue:{:?}", hue);
+        if let DrawMode::Outlined {
+            ref mut fill_mode,
+            ref mut outline_mode,
+        } = *draw_mode
+        {
+            fill_mode.color = Color::hsl(hue, 1.0, 0.5);
+            outline_mode.color = Color::BLACK;
+        }
+        commands.entity(id).remove::<Off>();
+        commands.entity(id).insert(On());
+    }
+}
 #[derive(Debug, Clone, Copy, Component)]
 struct Cpu {
     registers: [usize; usize::BITS as usize],
@@ -71,19 +193,30 @@ impl Cpu {
     fn on(&mut self, commands: &mut Commands, mut pixel: &mut Pixel) {
         commands.entity(pixel.0).remove::<Off>();
         commands.entity(pixel.0).remove::<Disabled>();
+        commands.entity(pixel.0).insert(Enabled());
         pixel.1 = true;
         // println!("{:?}", pixel);
     }
     fn off(&mut self, commands: &mut Commands, mut pixel: &mut Pixel) {
+        commands.entity(pixel.0).remove::<On>();
+        commands.entity(pixel.0).remove::<Enabled>();
         commands.entity(pixel.0).insert(Disabled());
         pixel.1 = false;
         // println!("{:?}", pixel);
     }
-    fn flip(&mut self, commands: &mut Commands, pixel: &mut Pixel) {
-        if pixel.1 {
-            self.off(commands, pixel);
-        } else {
+    fn set(&mut self, commands: &mut Commands, pixel: &mut Pixel, bit: bool) {
+        if bit {
             self.on(commands, pixel);
+        } else {
+            self.off(commands, pixel);
+        }
+    }
+    fn flip(&mut self, commands: &mut Commands, pixel: &mut Pixel) {
+        self.set(commands, pixel, !pixel.1);
+    }
+    fn clear(&mut self, mut commands: &mut Commands, screen: &mut Screen) {
+        for mut pixel in screen.0.as_mut() {
+            self.off(&mut commands, &mut pixel);
         }
     }
     fn cycle(&mut self, commands: &mut Commands, screen: &mut Screen) {
@@ -101,6 +234,7 @@ impl Cpu {
         self.counter += 2;
 
         self.flip(commands, &mut screen.0[1]);
+        // println!("f1{:?}", screen.0[1]);
 
         let opcode = (opcode_bytes.0 as u8 as u16) << 8 | opcode_bytes.1 as u8 as u16;
         println!(
@@ -116,7 +250,13 @@ impl Cpu {
 
         match (c, x, y, n) {
             (0, 0, 0, 0) => {
+                let hold = screen.0[1].1;
+                // println!("h{:?}", hold);
                 self.clear(commands, screen);
+                // println!("c{:?}", screen.0[1]);
+                self.set(commands, &mut screen.0[1], hold);
+                // println!("s{:?}", screen.0[1]);
+
                 println!(
                     "   END\tp:{:?}\ti:{:?}\tc:{:04X?}\tr:{:?}\ts:{:X?}\tEND\n",
                     self.pointer,
@@ -181,11 +321,6 @@ impl Cpu {
             "[deprecated] Unimplemented opcode: {:04X?}",
             self.read_opcode()
         );
-    }
-    fn clear(&mut self, mut commands: &mut Commands, screen: &Screen) {
-        for mut pixel in screen.0 {
-            self.off(&mut commands, &mut pixel);
-        }
     }
     fn call(&mut self, addr: usize) {
         println!(
@@ -525,122 +660,4 @@ fn default_registers() -> [usize; usize::BITS as usize] {
     registers[0] = 42;
     registers[1] = 5;
     registers
-}
-fn div_rem<T: ops::Div<Output = T> + ops::Rem<Output = T> + Copy>(x: T, y: T) -> (T, T) {
-    let quot = x / y;
-    let rem = x % y;
-    (quot, rem)
-}
-fn xyz_from_i(i: usize, z: usize) -> (f32, f32, f32) {
-    let (y, x) = div_rem(i as isize, SCREEN_X as isize);
-    // println!("{:?},{:?}", x, y);
-    let xyz = (
-        ((x - HALF_X as isize) * PIXEL_X as isize) as f32,
-        ((-y + HALF_Y as isize) * PIXEL_Y as isize) as f32,
-        z as f32,
-    );
-    // println!("{:?}", xyz);
-    xyz
-}
-fn cpu_cycle(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut timer: ResMut<CpuTimer>,
-    mut query: Query<(&mut Cpu, &mut Screen)>,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        let (mut cpu, mut screen) = query.single_mut();
-        cpu.cycle(&mut commands, screen.as_mut());
-    }
-}
-fn pixels_disable(
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut DrawMode), (Without<Off>, Added<Disabled>)>,
-) {
-    // println!("disable:{:?}", query.iter().count());
-    for (id, mut draw_mode) in query.iter_mut() {
-        // if color not black
-        match *draw_mode {
-            DrawMode::Outlined {
-                ref mut fill_mode,
-                ref mut outline_mode,
-            } => {
-                fill_mode.color = Color::BLACK;
-                outline_mode.color = Color::BLACK;
-            }
-            _ => (),
-        }
-        commands.entity(id).insert(Off());
-    }
-    // a bunch of work to invert for positive,
-    // plus this way pretty rainbow pixels
-    // skipping for now but still todo
-    // fn pixels_enable
-}
-fn pixels_change_color(mut query: Query<&mut DrawMode, Without<Off>>, time: Res<Time>) {
-    let hue = ((time.time_since_startup().as_millis() / 450) % 360) as f32;
-    for mut draw_mode in query.iter_mut() {
-        // println!("hue:{:?}", hue);
-        if let DrawMode::Outlined {
-            ref mut fill_mode,
-            ref mut outline_mode,
-        } = *draw_mode
-        {
-            fill_mode.color = Color::hsl(hue, 1.0, 0.5);
-            outline_mode.color = Color::BLACK;
-        }
-    }
-}
-fn setup_system(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-
-    let shape = shapes::RegularPolygon {
-        sides: 4,
-        feature: shapes::RegularPolygonFeature::Radius(5.0),
-        ..shapes::RegularPolygon::default()
-    };
-
-    let empty = commands.spawn().id();
-    commands.entity(empty).despawn();
-    let mut screen = [Pixel(empty, false); PIXELS];
-
-    for i in 0..screen.len() {
-        screen[i].0 = commands
-            .spawn_bundle(GeometryBuilder::build_as(
-                &shape,
-                DrawMode::Outlined {
-                    fill_mode: FillMode::color(Color::CYAN),
-                    outline_mode: StrokeMode::new(Color::BLACK, 5.0),
-                },
-                ops::Fn::call(&Transform::from_xyz, xyz_from_i(i, 0)),
-            ))
-            .id();
-    }
-
-    commands
-        .spawn()
-        .insert(Cpu {
-            registers: default_registers(),
-            stack: [0; usize::BITS as usize * 4],
-            memory: default_memory(),
-            counter: 0,
-            pointer: 0,
-            i: 0,
-            delay: 0,
-            sound: 0,
-        })
-        .insert(Screen(screen));
-}
-fn main() {
-    App::new()
-        .insert_resource(Msaa { samples: 4 })
-        .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin)
-        .add_startup_system(setup_system)
-        .insert_resource(CpuTimer(Timer::from_seconds(1.0, true)))
-        .insert_resource(AppTimer(Timer::from_seconds(1.0 / 60.0, true)))
-        .add_system(pixels_change_color)
-        .add_system(pixels_disable)
-        .add_system(cpu_cycle)
-        .run();
 }
