@@ -42,7 +42,7 @@ https://docs.rust-embedded.org/book/intro/no-std.html
 programming rust 2021
 the rust book
 https://doc.rust-lang.org/book/
-
+https://doc.rust-lang.org/nomicon
 ## Setup
 
 - install rust >=1.59 (or enable nightly/feature(destructuring_assignment))

@@ -12,3 +12,6 @@ bevy_prototype_lyon = "0.4.0"
 rand = "0.8.4"
 
 [features]
+
+[profile.release]
+debug = true
