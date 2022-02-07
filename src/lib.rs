@@ -1,5 +1,6 @@
 #![feature(fn_traits)]
 #![feature(type_ascription)]
-fn main() {
-    chip::main();
+mod app;
+pub fn main() {
+    app::new();
 }

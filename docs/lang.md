@@ -1,0 +1,25 @@
+===
+x = 1
+if x == 1 then
+  x = 2
+end if
+print x
+===
+(x)
+0xRAND1 = 1
+
+0xRAND2 = sne 0xRAND1 1
+  0xRAND1 = 2
+
+drw 0xRAND1
+===
+0x0 = sne 0x100 1
+0x2 = set 0x100 2
+0x4 = drw 0x100
+0x100 = 1
+===
+===
+lexical grammar
+===
+syntactical grammer
+===

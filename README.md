@@ -1,3 +1,4 @@
+# chip lox ide
 # chip implements [CHIP-8 Virtual Machine - wikipedia](https://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description)
 
 try chip games in the browser here:
@@ -43,6 +44,12 @@ programming rust 2021
 the rust book
 https://doc.rust-lang.org/book/
 https://doc.rust-lang.org/nomicon
+https://github.com/Ixrec/rust-orphan-rules
+https://oswalt.dev/2021/06/polymorphism-in-rust/
+http://forum.6502.org/viewtopic.php?p=69553&sid=72158e18396819d71eecdbd7c5ddd140#p69553
+this
+https://eater.net/8bit
+
 ## Setup
 
 - install rust >=1.59 (or enable nightly/feature(destructuring_assignment))
