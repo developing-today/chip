@@ -1,5 +1,6 @@
 chip (chip):
 runs byte code, emulates screen, timers, accepts input
+  todo: parallelize
   clear separation for
     chip ops
     superchip

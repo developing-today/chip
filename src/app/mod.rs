@@ -32,7 +32,7 @@ fn setup_system(mut commands: Commands) {
 
     let shape = shapes::RegularPolygon {
         sides: 4,
-        feature: shapes::RegularPolygonFeature::Radius(5.),
+        feature: shapes::RegularPolygonFeature::Radius(5.), // todo: export radius
         ..shapes::RegularPolygon::default()
     };
 
@@ -46,7 +46,7 @@ fn setup_system(mut commands: Commands) {
                 &shape,
                 DrawMode::Outlined {
                     fill_mode: FillMode::color(Color::CYAN),
-                    outline_mode: StrokeMode::new(Color::BLACK, 5.),
+                    outline_mode: StrokeMode::new(Color::BLACK, 5.), // todo: export line width
                 },
                 ops::Fn::call(&Transform::from_xyz, screen::i_to_xyz(i)),
             ))
