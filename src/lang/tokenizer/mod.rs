@@ -1,22 +1,15 @@
-extern crate num_traits;
 use num_traits::Num;
 use std::fmt;
 
-#[allow(dead_code)] // this fn is for testing
-fn add(x: u8) -> u8 {
-    x + 1
-}
 struct NumberData(String);
 impl Into<Token> for NumberData {
     fn into(self) -> Token {
         Token::NumberData(self.0)
     }
 }
-
 struct Number<T>(T)
 where
     T: Num;
-
 impl<T: Num> Into<NumberData> for Number<T>
 where
     T: Num + fmt::Display,
@@ -25,7 +18,6 @@ where
         NumberData(self.0.to_string())
     }
 }
-
 impl<'a, T: Num> From<(char, &mut std::str::Chars<'a>)> for Number<T>
 where
     T: Num + fmt::Display + std::str::FromStr,
@@ -114,7 +106,6 @@ impl<'a> From<&mut std::str::Chars<'a>> for Data {
         Data(id)
     }
 }
-
 struct Whitespace;
 struct Plus;
 struct Minus;
@@ -127,7 +118,7 @@ struct Newline;
 struct Unknown;
 
 #[derive(Debug, PartialEq)]
-enum Token {
+pub enum Token {
     NumberData(String),
     Identifier(String),
     Data(String),
@@ -142,14 +133,7 @@ enum Token {
     Newline,
     Unknown,
 }
-// impl<T> From<T> for Number<T>
-// {
-//     fn from(val: T) -> Self {
-//         Number(val)
-//     }
-// }
-
-fn tokenize(s: &str) -> Vec<Token> {
+pub(crate) fn tokenize(s: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut chars = s.chars();
     let mut char = chars.next();
@@ -194,7 +178,7 @@ mod tests {
     }
 }
 
-pub(crate) fn main() {
+pub(crate) fn new() {
     let x = "x = 32 + 5 * 2 - 10 + 10 wdfwe 23r 2f.ffasdf ;4 3q'dfw/df s fsdfs.sd;fsf
 
     !@#!$%#^$#&^$(& )
