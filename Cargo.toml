@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.6.0", features = ["dynamic"] } # disable dynamic plugin before release
 bevy_prototype_lyon = "0.4.0"
+num-traits = "0.2.14"
 rand = "0.8.4"
 
 [features]
