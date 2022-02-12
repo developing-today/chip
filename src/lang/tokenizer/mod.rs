@@ -97,7 +97,7 @@ mod tests {
         let input = "1 + 1.1";
         let expected = vec![
             Token::NumberData(NumberData(1.to_string())),
-            // Token::Plus,
+            Token::Plus(Plus),
             Token::NumberData(NumberData(1.1.to_string())),
         ];
         assert_eq!(tokenize(input), expected);
@@ -198,24 +198,16 @@ where
 {
     fn from(val: (char, &mut Chars<'a>)) -> Self {
         let (c, chars) = val;
-        let mut num = String::new();
-        num.push(c);
-
         let mut dec = 0;
         let mut rat = false;
-        let mut first_dec = true;
-
+        let mut num = String::new();
+        num.push(c);
         while let Some(c) = chars.next() {
             if c.is_digit(10) {
                 num.push(c);
 
                 if rat {
-                    if first_dec {
-                        dec += 1;
-                        first_dec = false;
-                    } else {
-                        dec += 1;
-                    }
+                    dec += 1;
                 }
             } else if !rat && c == '.' {
                 rat = true;
