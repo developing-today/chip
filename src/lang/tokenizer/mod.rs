@@ -1,42 +1,8 @@
-use std::str::{Chars, FromStr};
-
-use fraction::Signed;
-use num_traits::abs;
 use rug::Rational;
+use std::str::{Chars, FromStr};
 fn variant_eq<T>(lhs: &T, rhs: &T) -> bool {
     std::mem::discriminant(lhs) == std::mem::discriminant(rhs)
 }
-#[derive(Debug, Clone, PartialEq)]
-pub struct NumberData(String);
-pub struct Number<T>(T);
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Identifier(String);
-#[derive(Debug, Clone, PartialEq)]
-pub struct Data(String);
-#[derive(Debug, Clone, PartialEq)]
-struct Any;
-#[derive(Debug, Clone, PartialEq)]
-pub struct Whitespace(Any);
-#[derive(Debug, Clone, PartialEq)]
-pub struct Plus;
-#[derive(Debug, Clone, PartialEq)]
-pub struct Minus;
-#[derive(Debug, Clone, PartialEq)]
-pub struct Multiply;
-#[derive(Debug, Clone, PartialEq)]
-pub struct Divide;
-#[derive(Debug, Clone, PartialEq)]
-pub struct Modulo;
-#[derive(Debug, Clone, PartialEq)]
-pub struct LParen;
-#[derive(Debug, Clone, PartialEq)]
-pub struct RParen;
-#[derive(Debug, Clone, PartialEq)]
-pub struct Newline;
-#[derive(Debug, Clone, PartialEq)]
-pub struct Unknown;
-
 #[derive(Debug, PartialEq)]
 pub enum Token {
     NumberData(NumberData),
@@ -54,6 +20,53 @@ pub enum Token {
     Unknown(Unknown),
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tokenize() {
+        let input = "1 + 1.1";
+        let expected = vec![
+            Token::NumberData(Number(1).into()),
+            Token::Plus(Plus),
+            Token::NumberData(('1', &mut ".1".chars()).into()),
+        ];
+        assert_eq!(tokenize(input), expected);
+    }
+}
+
+#[test]
+pub(crate) fn new() {
+    let x = r#"x = 32 + 5 * 2 - 10 + 10
+
+    !@#!$%#^$#&^$(& )
+    "hello ""clarice"""
+    yololololo
+    seven eight nine 10 1234123412.1444;
+    // 32 + 10 - 10 + 10
+    // 42 - 10 + 10
+    // 32 + 10
+    // 42"#;
+    let y = tokenize(x);
+    println!("{y:#?}");
+
+    let z = tokenize(
+        "x = 10
+    y = 20
+    z = 30
+
+    result = x + - ( y + ( z - x * y + z ) - x * y )
+
+    if result then
+        print result
+    else
+        print \"\"\"fail\"\"\"
+    end
+    ",
+    );
+    println!("{z:#?}");
+}
 pub(crate) fn tokenize(s: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut chars = s.chars();
@@ -88,53 +101,36 @@ pub(crate) fn tokenize(s: &str) -> Vec<Token> {
     tokens
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Debug, Clone, PartialEq)]
+pub struct NumberData(String);
+pub struct Number<T>(T);
 
-    #[test]
-    fn test_tokenize() {
-        let input = "1 + 1.1";
-        let expected = vec![
-            Token::NumberData(NumberData(1.to_string())),
-            Token::Plus(Plus),
-            Token::NumberData(NumberData(1.1.to_string())),
-        ];
-        assert_eq!(tokenize(input), expected);
-    }
-}
-
-#[test]
-pub(crate) fn new() {
-    let x = "x = 32 + 5 * 2 - 10 + 10
-
-    !@#!$%#^$#&^$(& )
-    \"hello \"\"clarice\"\"\"
-    yololololo
-    seven eight nine 10 1234123412.1444";
-    // 32 + 10 - 10 + 10
-    // 42 - 10 + 10
-    // 32 + 10
-    // 42
-    let y = tokenize(x);
-    println!("{y:#?}");
-
-    let z = tokenize(
-        "x = 10
-    y = 20
-    z = 30
-
-    result = x + - ( y + ( z - x * y + z ) - x * y )
-
-    if result then
-        print result
-    else
-        print \"\"\"fail\"\"\"
-    end
-    ",
-    );
-    println!("{z:#?}");
-}
+#[derive(Debug, Clone, PartialEq)]
+pub struct Identifier(String);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Data(String);
+#[derive(Debug, Clone, PartialEq)]
+struct Any;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Whitespace(Any);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Plus;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Minus;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Multiply;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Divide;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Modulo;
+#[derive(Debug, Clone, PartialEq)]
+pub struct LParen;
+#[derive(Debug, Clone, PartialEq)]
+pub struct RParen;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Newline;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unknown;
 
 impl From<NumberData> for Token {
     fn from(val: NumberData) -> Self {
