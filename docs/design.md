@@ -26,6 +26,8 @@ runs byte code, emulates screen, timers, accepts input
     op/asm source file (consider ext .clox, not final)
     some sort of op code repl?
     some sort of asm repl?
+     chip 64, 6502, core wars all versions
+     get lang built compile on all of these plus native, then add/replace IR inkject llvm somewhere
   flags:
     cycles (optional N cycles to run then pause)
     verbose (println eery op)
