@@ -52,6 +52,8 @@ generates executables (byte code, binaries, wasm)
     smalltalk
     objC/swift
     powershell
+    i want to be able to read apl so that i can never look at it again
+    what are smt solvers? are those like sudoku?
   for absolute beginners, but could also be more.
 
 chiploxide (chipi | chipo | chipe)
