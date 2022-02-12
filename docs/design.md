@@ -66,3 +66,7 @@ chip game developing environment
   export exe, linux binary, chip/superChip/loxChip bytecode, wasm w/simple index.html
   import your own lox or rust code, bevy packages
   let beginners play in the basics until they organically discover & outgrow the constraints
+blah names whatever
+CHIP LOxIDE
+CHIPloxIDE
+chiploxide

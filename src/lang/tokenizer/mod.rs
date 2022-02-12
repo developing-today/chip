@@ -1,56 +1,240 @@
-use num_traits::Num;
-use std::fmt;
+use std::str::{Chars, FromStr};
 
-struct NumberData(String);
-impl Into<Token> for NumberData {
-    fn into(self) -> Token {
-        Token::NumberData(self.0)
+use fraction::Signed;
+use num_traits::abs;
+use rug::Rational;
+fn variant_eq<T>(lhs: &T, rhs: &T) -> bool {
+    std::mem::discriminant(lhs) == std::mem::discriminant(rhs)
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct NumberData(String);
+pub struct Number<T>(T);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Identifier(String);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Data(String);
+#[derive(Debug, Clone, PartialEq)]
+struct Any;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Whitespace(Any);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Plus;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Minus;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Multiply;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Divide;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Modulo;
+#[derive(Debug, Clone, PartialEq)]
+pub struct LParen;
+#[derive(Debug, Clone, PartialEq)]
+pub struct RParen;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Newline;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unknown;
+
+#[derive(Debug, PartialEq)]
+pub enum Token {
+    NumberData(NumberData),
+    Identifier(Identifier),
+    Data(Data),
+    Whitespace(Whitespace),
+    Plus(Plus),
+    Minus(Minus),
+    Multiply(Multiply),
+    Divide(Divide),
+    Modulo(Modulo),
+    LParen(LParen),
+    RParen(RParen),
+    Newline(Newline),
+    Unknown(Unknown),
+}
+
+pub(crate) fn tokenize(s: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut chars = s.chars();
+    let mut char = chars.next();
+
+    while char.is_some() {
+        tokens.push(match char.unwrap() {
+            ' ' => Token::Whitespace(Whitespace(Any)),
+            '+' => Token::Plus(Plus),
+            '-' => Token::Minus(Minus),
+            '*' => Token::Multiply(Multiply),
+            '/' => Token::Divide(Divide),
+            '%' => Token::Modulo(Modulo),
+            '(' => Token::LParen(LParen),
+            ')' => Token::RParen(RParen),
+            '\n' => Token::Newline(Newline),
+            c @ '0'..='9' => NumberData::from((c, &mut chars)).into(),
+            c @ 'a'..='z' | c @ 'A'..='Z' => Identifier::from((c, &mut chars)).into(),
+            '"' => Data::from(&mut chars).into(),
+            _ => Token::Unknown(Unknown),
+        });
+        char = chars.next();
+    }
+    tokens.retain(|t| -> bool {
+        !variant_eq(t, &Token::Whitespace(Whitespace(Any)))
+            && !variant_eq(t, &Token::Newline(Newline))
+            && !variant_eq(t, &Token::Unknown(Unknown))
+    });
+    while tokens.last().is_some() && variant_eq(tokens.last().unwrap(), &Token::RParen(RParen)) {
+        tokens.pop();
+    }
+    tokens
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tokenize() {
+        let input = "1 + 1.1";
+        let expected = vec![
+            Token::NumberData(NumberData(1.to_string())),
+            // Token::Plus,
+            Token::NumberData(NumberData(1.1.to_string())),
+        ];
+        assert_eq!(tokenize(input), expected);
     }
 }
-struct Number<T>(T)
-where
-    T: Num;
-impl<T: Num> Into<NumberData> for Number<T>
-where
-    T: Num + fmt::Display,
-{
-    fn into(self) -> NumberData {
-        NumberData(self.0.to_string())
+
+#[test]
+pub(crate) fn new() {
+    let x = "x = 32 + 5 * 2 - 10 + 10
+
+    !@#!$%#^$#&^$(& )
+    \"hello \"\"clarice\"\"\"
+    yololololo
+    seven eight nine 10 1234123412.1444";
+    // 32 + 10 - 10 + 10
+    // 42 - 10 + 10
+    // 32 + 10
+    // 42
+    let y = tokenize(x);
+    println!("{y:#?}");
+
+    let z = tokenize(
+        "x = 10
+    y = 20
+    z = 30
+
+    result = x + - ( y + ( z - x * y + z ) - x * y )
+
+    if result then
+        print result
+    else
+        print \"\"\"fail\"\"\"
+    end
+    ",
+    );
+    println!("{z:#?}");
+}
+
+impl From<NumberData> for Token {
+    fn from(val: NumberData) -> Self {
+        Token::NumberData(NumberData(val.0))
     }
 }
-impl<'a, T: Num> From<(char, &mut std::str::Chars<'a>)> for Number<T>
+
+// impl<T> Zero for Number<T>
+// where
+//     T: Add,
+// {
+//     fn set_zero(&mut self) {
+//         *self = Zero::zero();
+//     }
+
+//     fn is_zero(&self) -> bool {
+//         true
+//     }
+// }
+
+// impl<T> Add for Number<T>
+// where
+//     T: Add,
+//     T: Default,
+// {
+//     fn add(&mut self, x: Number<T>) -> Number<T> {
+//         Number(self.0 + x.0)
+//     }
+// }
+impl<T> From<Number<T>> for rug::Rational
 where
-    T: Num + fmt::Display + std::str::FromStr,
+    T: std::fmt::Display,
 {
-    fn from(val: (char, &mut std::str::Chars<'a>)) -> Self {
+    fn from(val: Number<T>) -> Self {
+        <rug::Rational as FromStr>::from_str(&val.0.to_string()).unwrap()
+    }
+}
+impl<T> From<NumberData> for Number<T> {
+    fn from(x: NumberData) -> Self {
+        x.into()
+    }
+}
+impl<T> From<Number<T>> for NumberData
+where
+    T: std::fmt::Display,
+{
+    fn from(val: Number<T>) -> Self {
+        NumberData(val.0.to_string())
+    }
+}
+impl From<(char, &mut Chars<'_>)> for NumberData {
+    fn from(input: (char, &mut Chars<'_>)) -> Self {
+        let xx: Number<Rational> = input.into();
+        NumberData(xx.0.to_string())
+    }
+}
+impl<'a, T: FromStr> From<(char, &mut Chars<'a>)> for Number<T>
+where
+    T: FromStr,
+    <T as FromStr>::Err: std::fmt::Debug,
+{
+    fn from(val: (char, &mut Chars<'a>)) -> Self {
         let (c, chars) = val;
         let mut num = String::new();
         num.push(c);
-        let mut decimal_point = false;
+
+        let mut dec = 0;
+        let mut rat = false;
+        let mut first_dec = true;
+
         while let Some(c) = chars.next() {
             if c.is_digit(10) {
                 num.push(c);
-            } else {
-                if c == '.' && !decimal_point {
-                    num.push(c);
-                    decimal_point = true;
-                } else {
-                    break;
+
+                if rat {
+                    if first_dec {
+                        dec += 1;
+                        first_dec = false;
+                    } else {
+                        dec += 1;
+                    }
                 }
+            } else if !rat && c == '.' {
+                rat = true;
+            } else {
+                break;
             }
         }
-        Number(num.parse::<T>().unwrap_or(T::zero()))
+
+        Number(T::from_str(&format!("{num}/1{den}", den = &"0".repeat(dec)[..])[..]).unwrap())
     }
 }
 
-struct Identifier(String);
-impl Into<Token> for Identifier {
-    fn into(self) -> Token {
-        Token::Identifier(self.0)
+impl From<Identifier> for Token {
+    fn from(val: Identifier) -> Self {
+        Token::Identifier(Identifier(val.0))
     }
 }
-impl<'a> From<(char, &mut std::str::Chars<'a>)> for Identifier {
-    fn from(val: (char, &mut std::str::Chars<'a>)) -> Self {
+impl<'a> From<(char, &mut Chars<'a>)> for Identifier {
+    fn from(val: (char, &mut Chars<'a>)) -> Self {
         let (c, chars) = val;
         let mut id = String::new();
         id.push(c);
@@ -65,14 +249,13 @@ impl<'a> From<(char, &mut std::str::Chars<'a>)> for Identifier {
     }
 }
 
-struct Data(String);
-impl Into<Token> for Data {
-    fn into(self) -> Token {
-        Token::Data(self.0)
+impl From<Data> for Token {
+    fn from(val: Data) -> Self {
+        Token::Data(Data(val.0))
     }
 }
-impl<'a> From<&mut std::str::Chars<'a>> for Data {
-    fn from(val: &mut std::str::Chars<'a>) -> Self {
+impl<'a> From<&mut Chars<'a>> for Data {
+    fn from(val: &mut Chars<'a>) -> Self {
         let mut id = String::new();
 
         let mut escaped = false;
@@ -105,106 +288,4 @@ impl<'a> From<&mut std::str::Chars<'a>> for Data {
         // hello "clarice"
         Data(id)
     }
-}
-struct Whitespace;
-struct Plus;
-struct Minus;
-struct Multiply;
-struct Divide;
-struct Modulo;
-struct LParen;
-struct RParen;
-struct Newline;
-struct Unknown;
-
-#[derive(Debug, PartialEq)]
-pub enum Token {
-    NumberData(String),
-    Identifier(String),
-    Data(String),
-    Whitespace,
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Modulo,
-    LParen,
-    RParen,
-    Newline,
-    Unknown,
-}
-pub(crate) fn tokenize(s: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut chars = s.chars();
-    let mut char = chars.next();
-
-    while char.is_some() {
-        tokens.push(match char.unwrap() {
-            ' ' => Token::Whitespace,
-            '+' => Token::Plus,
-            '-' => Token::Minus,
-            '*' => Token::Multiply,
-            '/' => Token::Divide,
-            '%' => Token::Modulo,
-            '(' => Token::LParen,
-            ')' => Token::RParen,
-            '\n' => Token::Newline,
-            c @ '0'..='9' => NumberData::from(Number::<f64>::from((c, &mut chars)).into()).into(),
-            c @ 'a'..='z' | c @ 'A'..='Z' => Identifier::from((c, &mut chars)).into(),
-            '"' => Data::from(&mut chars).into(),
-            _ => Token::Unknown,
-        });
-        char = chars.next();
-    }
-    tokens
-        .into_iter()
-        .filter(|t| t != &Token::Unknown && t != &Token::Whitespace && t != &Token::Newline)
-        .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tokenize() {
-        let input = "1 + 1.1";
-        let expected = vec![
-            Token::NumberData(1.to_string()),
-            Token::Plus,
-            Token::NumberData(1.1.to_string()),
-        ];
-        assert_eq!(tokenize(input), expected);
-    }
-}
-
-pub(crate) fn new() {
-    let x = "x = 32 + 5 * 2 - 10 + 10 wdfwe 23r 2f.ffasdf ;4 3q'dfw/df s fsdfs.sd;fsf
-
-    !@#!$%#^$#&^$(& )
-    \"hello \"\"clarice\"\"\"
-    yololololo
-    seven eight nine 10 1234123412.1444";
-    // 32 + 10 - 10 + 10
-    // 42 - 10 + 10
-    // 32 + 10
-    // 42
-    let y = tokenize(x);
-    println!("{y:#?}");
-
-    let z = tokenize(
-        "x = 10
-    y = 20
-    z = 30
-
-    result = x + - ( y + ( z - x * y + z ) - x * y )
-
-    if result then
-        print result
-    else
-        print \"\"\"fail\"\"\"
-    end
-    ",
-    );
-    println!("{z:#?}");
 }
