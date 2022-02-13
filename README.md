@@ -33,6 +33,10 @@ https://blog.adamchalmers.com/nom-chars/
 https://github.com/clap-rs/clap
 https://bevy-cheatbook.github.io/
 https://docs.rs/bevy/0.6.0/bevy/
+https://matklad.github.io/2020/04/15/from-pratt-to-dijkstra.html
+https://blog.evanchen.cc/2015/03/14/writing/
+https://danielkeep.github.io/tlborm/book
+
 
 interesting books
 rust in Action

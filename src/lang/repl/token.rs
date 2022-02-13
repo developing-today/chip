@@ -1,7 +1,9 @@
 use std::io;
 use std::io::Write;
 
-pub fn new() -> ! {
+use crate::lang::tokens::Token;
+
+pub fn new(input: &str) -> Vec<Token> {
     // cli input arguments (clap?)
     // <binary> <file descriptor> <file descriptor> ...
     // run each sequentially, stop on first error
@@ -12,19 +14,21 @@ pub fn new() -> ! {
     // repl ignores newlines escaped with '\'
     // todo: implement
     // todo: flags
-    print!("Token> ");
-    loop {
-        rep();
-    }
+    super::super::tokens::tokenize(input)
 }
-fn rep() {
+
+fn rep(input: &str) -> Vec<Token> {
+    new(input)
+}
+
+pub fn repl() -> ! {
     std::io::stdout().flush().unwrap();
     let mut input = String::new();
     io::stdin()
         .read_line(&mut input)
         .expect("error: unable to read user input");
-    print!(
-        "Token: {:#?}\nToken> ",
-        super::super::tokenizer::tokenize(&input)
-    );
+    print!("Token> ");
+    loop {
+        print!("Token: {:#?}\nToken> ", rep(&input));
+    }
 }

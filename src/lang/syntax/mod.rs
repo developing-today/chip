@@ -1,9 +1,37 @@
-pub mod tree;
-
-use super::tokenizer::tokenize;
-
+pub mod trees;
+use crate::lang::repl::token;
 fn main() {
-    let mut tokenizer = Tokenizer::new("fn main() { }");
-    let tokens = tokenizer.tokenize();
-    println!("{:?}", tokens);
+    println!(
+        "{:?}",
+        token::new(
+            r#"pub mod trees;
+use crate::lang::repl::token;
+fn main() {
+    println!("{:?}", token::new(r#"pub mod trees;
+use crate::lang::repl::token;
+fn main() {
+    println!("{:?}", token::new(r#"pub mod trees;
+use crate::lang::repl::token;
+fn main() {
+    println!("{:?}", token::new(r#"pub mod trees;
+use crate::lang::repl::token;
+fn main() {
+    println!(
+        "{:?}",
+        token::new(
+            r#"pub mod trees;
+use crate::lang::repl::token;
+fn main() {
+    println!("{:?}", token::new(r#"pub mod trees;
+use crate::lang::repl::token;
+fn main() {
+    println!("{:?}", token::new(r#"pub mod trees;
+use crate::lang::repl::token;
+fn main() {
+    println!("{:?}", token::new(r#""#
+        )
+    );
 }
+/*
+maybe if i keep iterating i will make a file that prints itself
+*/
