@@ -147,14 +147,8 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
             AtomicToken::Modulo => Token::Modulo(Modulo),
             AtomicToken::LParen => Token::LParen(LParen),
             AtomicToken::RParen => Token::RParen(RParen),
-            AtomicToken::Newline => {
-                is_next_char = true;
-                Token::Newline(Newline::from(&mut chars))
-            }
-            AtomicToken::Whitespace => {
-                is_next_char = true;
-                Token::Whitespace(Whitespace::from(&mut chars))
-            }
+            AtomicToken::Newline => Token::Newline(Newline),
+            AtomicToken::Whitespace => Token::Whitespace(Whitespace()),
             atomic_token => {
                 is_complex = true;
                 let mut string = String::new();
@@ -231,24 +225,21 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
                             while char.is_some() {
                                 char_unwrapped = char.unwrap();
                                 if !variant_eq(&char_unwrapped.into(), &AtomicToken::Unknown) {
-                                    is_next_char = true;
                                     break;
                                 }
                                 string.push(char_unwrapped);
                                 char = chars.next();
                             }
+                            is_next_char = true;
                             Token::Identifier(Identifier(string.clone()))
                         }
 
                         DataToken::Data => {
-                            string.push(char_unwrapped);
-                            char = chars.next();
                             let mut escaped = false;
                             while char.is_some() {
                                 char_unwrapped = char.unwrap();
                                 if escaped {
                                     if !variant_eq(&char_unwrapped.into(), &AtomicToken::DQuote) {
-                                        is_next_char = true;
                                         break;
                                     }
                                 } else if variant_eq(&char_unwrapped.into(), &AtomicToken::DQuote) {
@@ -264,18 +255,24 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
                             // hello "clarice"""
                             // hello "clarice""
                             // hello "clarice"
+                            is_next_char = true;
                             Token::Data(Data(string.clone()))
                         }
 
-                        _ => Token::Unknown(Unknown),
+                        _ => {
+                            is_next_char = true;
+                            Token::Unknown(Unknown)
+                        }
                     };
                 }
                 result
             }
         });
+        if !is_complex & !is_next_char {
+            char = chars.next();
+        }
         is_next_char = false;
-        char = chars.next();
-        // }
+        is_complex = false;
     }
 
     tokens.retain(|t| -> bool {
@@ -306,7 +303,11 @@ pub struct Data(String);
 pub struct Whitespace();
 impl From<&mut Chars<'_>> for Whitespace {
     fn from(chars: &mut Chars) -> Self {
-        while let AtomicToken::Whitespace = chars.next().unwrap().into() {}
+        while let Some(char) = chars.next() {
+            if !variant_eq(&char.into(), &AtomicToken::Whitespace) {
+                break;
+            }
+        }
         Whitespace()
     }
 }
