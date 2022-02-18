@@ -23,12 +23,15 @@ fn rep(input: &str) -> Vec<Token> {
 
 pub fn repl() -> ! {
     std::io::stdout().flush().unwrap();
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("error: unable to read user input");
     print!("Token> ");
     loop {
-        print!("Token: {:#?}\nToken> ", rep(&input));
+        let mut input = String::new();
+        std::io::stdout().flush().unwrap();
+        io::stdin()
+            .read_line(&mut input)
+            .expect("error: unable to read user input");
+        std::io::stdout().flush().unwrap();
+        print!("\nToken:\n{:#?}\n\nToken> ", rep(&input));
+        std::io::stdout().flush().unwrap();
     }
 }

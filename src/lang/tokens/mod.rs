@@ -6,11 +6,11 @@ use std::{
 fn variant_eq<T>(lhs: &T, rhs: &T) -> bool {
     std::mem::discriminant(lhs) == std::mem::discriminant(rhs)
 }
-#[derive(Copy, Debug, PartialEq, Clone)]
-pub enum Token<'a> {
-    NumberData(NumberData<'a>),
-    Identifier(Identifier<'a>),
-    Data(Data<'a>),
+#[derive(Debug, PartialEq, Clone)]
+pub enum Token {
+    NumberData(NumberData),
+    Identifier(Identifier),
+    Data(Data),
     Whitespace(Whitespace),
     Plus(Plus),
     Minus(Minus),
@@ -21,10 +21,11 @@ pub enum Token<'a> {
     RParen(RParen),
     Newline(Newline),
     Unknown(Unknown),
-    // eof, dot, Op, any, maybe :<>[],?,String Star Slash Percent Caret Ampersand Pipe Tilde Neq Lt
-    // but if its not needed, just do it in standard:library
-    // and use identifier in the tokenizer
 }
+
+// eof, dot, Op, any, maybe :<>[],?,String Star Slash Percent Caret Ampersand Pipe Tilde Neq Lt
+// but if its not needed, just do it in standard:library
+// and use identifier in the tokenizer}
 
 // #[cfg(test)]
 // mod tests {
@@ -34,9 +35,9 @@ pub enum Token<'a> {
 //     fn test_tokenize() {
 //         let input = "1 + 1.1";
 //         let expected = vec![
-//             Token::NumberData<'a>(Number(1).into()),
+//             Token::NumberData(Number(1)),
 //             Token::Plus(Plus),
-//             Token::NumberData<'a>(('1', &mut ".1".chars()).into()), // TODO: should stop awakening ancient slumbers
+//             Token::NumberData(('1', &mut ".1".chars())), // TODO: should stop awakening ancient slumbers
 //         ];
 //         assert_eq!(tokenize(input), expected);
 //     }
@@ -74,31 +75,211 @@ pub(crate) fn new() {
     );
     println!("{z:#?}");
 }
-pub(crate) fn tokenize(s: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut chars = s.chars();
-    let mut char = chars.next();
-
-    while char.is_some() {
-        tokens.push(match char.unwrap() {
-            ' ' => Token::Whitespace(Whitespace(Any)),
-            '+' => Token::Plus(Plus),
-            '-' => Token::Minus(Minus),
-            '*' => Token::Multiply(Multiply),
-            '/' => Token::Divide(Divide),
-            '%' => Token::Modulo(Modulo),
-            '(' => Token::LParen(LParen),
-            ')' => Token::RParen(RParen),
-            '\n' => Token::Newline(Newline),
-            c @ '0'..='9' => NumberData::from((c, &mut chars)).into(),
-            c @ 'a'..='z' | c @ 'A'..='Z' => Identifier::from((c, &mut chars)).into(),
-            '"' => Data::from(&mut chars).into(),
-            _ => Token::Unknown(Unknown),
-        });
-        char = chars.next();
+pub enum AtomicToken {
+    Whitespace,
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Modulo,
+    LParen,
+    RParen,
+    Newline,
+    DQuote,
+    Dot,
+    Unknown,
+}
+impl From<char> for AtomicToken {
+    fn from(c: char) -> Self {
+        match c {
+            ' ' => AtomicToken::Whitespace,
+            '+' => AtomicToken::Plus,
+            '-' => AtomicToken::Minus,
+            '*' => AtomicToken::Multiply,
+            '/' => AtomicToken::Divide,
+            '%' => AtomicToken::Modulo,
+            '(' => AtomicToken::LParen,
+            ')' => AtomicToken::RParen,
+            '\n' | '\r' => AtomicToken::Newline,
+            '"' => AtomicToken::DQuote,
+            '.' => AtomicToken::Dot,
+            _ => AtomicToken::Unknown,
+        }
     }
+}
+impl From<AtomicToken> for char {
+    fn from(token: AtomicToken) -> Self {
+        match token {
+            AtomicToken::Plus => '+',
+            AtomicToken::Minus => '-',
+            AtomicToken::Multiply => '*',
+            AtomicToken::Divide => '/',
+            AtomicToken::Modulo => '%',
+            AtomicToken::LParen => '(',
+            AtomicToken::RParen => ')',
+            AtomicToken::Newline => '\n',
+            AtomicToken::DQuote => '"',
+            AtomicToken::Dot => '.',
+            AtomicToken::Whitespace | AtomicToken::Unknown => ' ',
+        }
+    }
+}
+enum DataToken {
+    Number,
+    Data,
+    Identifier,
+    Unknown,
+}
+
+pub(crate) fn tokenize(str: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut chars = str.chars();
+    let mut char = chars.next();
+    let mut is_next_char = false;
+    let mut is_complex = false;
+    while char.is_some() {
+        let mut char_unwrapped = char.unwrap();
+        tokens.push(match AtomicToken::from(char_unwrapped) {
+            AtomicToken::Plus => Token::Plus(Plus),
+            AtomicToken::Minus => Token::Minus(Minus),
+            AtomicToken::Multiply => Token::Multiply(Multiply),
+            AtomicToken::Divide => Token::Divide(Divide),
+            AtomicToken::Modulo => Token::Modulo(Modulo),
+            AtomicToken::LParen => Token::LParen(LParen),
+            AtomicToken::RParen => Token::RParen(RParen),
+            AtomicToken::Newline => {
+                is_next_char = true;
+                Token::Newline(Newline::from(&mut chars))
+            }
+            AtomicToken::Whitespace => {
+                is_next_char = true;
+                Token::Whitespace(Whitespace::from(&mut chars))
+            }
+            atomic_token => {
+                is_complex = true;
+                let mut string = String::new();
+                let mut data_type = if char_unwrapped.is_numeric() {
+                    DataToken::Number
+                } else if variant_eq(&atomic_token, &AtomicToken::DQuote) {
+                    char = chars.next(); // skip leading "
+                    if char.is_some() {
+                        char_unwrapped = char.unwrap();
+                    } else {
+                        break;
+                    }
+                    DataToken::Data
+                } else {
+                    DataToken::Identifier
+                };
+
+                let mut result = Token::Unknown(Unknown);
+                print!("bef|\n");
+
+                while !is_next_char {
+                    print!("res{result:?}|str{string:?}|chr{char:?}\n");
+                    result = match data_type {
+                        DataToken::Number => {
+                            print!("number|\n");
+                            let mut decimal_point = 0;
+                            let mut right_of_decimal_separator = false;
+                            string.push(char_unwrapped);
+                            char = chars.next();
+                            while char.is_some() {
+                                char_unwrapped = char.unwrap();
+                                match char_unwrapped {
+                                    c if c.is_numeric() => {
+                                        string.push(c);
+                                        if right_of_decimal_separator {
+                                            decimal_point += 1;
+                                        }
+                                    }
+                                    c if variant_eq(&c.into(), &AtomicToken::Dot)
+                                        && !right_of_decimal_separator =>
+                                    {
+                                        right_of_decimal_separator = true;
+                                    }
+                                    c => {
+                                        if variant_eq(&c.into(), &AtomicToken::Unknown) {
+                                            data_type = DataToken::Identifier;
+                                        }
+                                        break;
+                                    }
+                                }
+                                char = chars.next();
+                            }
+                            if variant_eq(&data_type, &DataToken::Number) {
+                                is_next_char = true;
+                                Token::NumberData(NumberData(
+                                    Rational::from_str(
+                                        &format!(
+                                            "{numerator}/1{denominator_zeroes}",
+                                            numerator = string,
+                                            denominator_zeroes = &"0".repeat(decimal_point)[..]
+                                        )[..],
+                                    )
+                                    .unwrap()
+                                    .to_string(),
+                                ))
+                            } else {
+                                continue;
+                            }
+                        }
+
+                        DataToken::Identifier => {
+                            string.push(char_unwrapped);
+                            char = chars.next();
+                            while char.is_some() {
+                                char_unwrapped = char.unwrap();
+                                if !variant_eq(&char_unwrapped.into(), &AtomicToken::Unknown) {
+                                    is_next_char = true;
+                                    break;
+                                }
+                                string.push(char_unwrapped);
+                                char = chars.next();
+                            }
+                            Token::Identifier(Identifier(string.clone()))
+                        }
+
+                        DataToken::Data => {
+                            string.push(char_unwrapped);
+                            char = chars.next();
+                            let mut escaped = false;
+                            while char.is_some() {
+                                char_unwrapped = char.unwrap();
+                                if escaped {
+                                    if !variant_eq(&char_unwrapped.into(), &AtomicToken::DQuote) {
+                                        is_next_char = true;
+                                        break;
+                                    }
+                                } else if variant_eq(&char_unwrapped.into(), &AtomicToken::DQuote) {
+                                    escaped = !escaped;
+                                    char = chars.next();
+                                    continue;
+                                }
+                                string.push(char_unwrapped);
+                                char = chars.next();
+                            }
+                            // "hello ""clarice"""
+                            // hello ""clarice""".is_some'1
+                            // hello "clarice"""
+                            // hello "clarice""
+                            // hello "clarice"
+                            Token::Data(Data(string.clone()))
+                        }
+
+                        _ => Token::Unknown(Unknown),
+                    };
+                }
+                result
+            }
+        });
+        is_next_char = false;
+        char = chars.next();
+        // }
+    }
+
     tokens.retain(|t| -> bool {
-        !variant_eq(t, &Token::Whitespace(Whitespace(Any)))
+        !variant_eq(t, &Token::Whitespace(Whitespace()))
             && !variant_eq(t, &Token::Newline(Newline))
             && !variant_eq(t, &Token::Unknown(Unknown))
     });
@@ -108,18 +289,27 @@ pub(crate) fn tokenize(s: &str) -> Vec<Token> {
     tokens
 }
 
-#[derive(Copy, Debug, Clone, PartialEq)]
-pub struct NumberData<'a>(&'a str); // TODO: link numberT and str, and make it a trait
+impl Token {
+    fn tokenize(s: &str) -> Vec<Token> {
+        tokenize(s)
+    }
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct NumberData(String);
 pub struct Number<T>(T);
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Identifier(String);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Data(String);
 #[derive(Copy, Debug, Clone, PartialEq)]
-pub struct Identifier<'a>(&'a str);
-#[derive(Copy, Debug, Clone, PartialEq)]
-pub struct Data<'a>(&'a str);
-#[derive(Copy, Debug, Clone, PartialEq)]
-struct Any;
-#[derive(Copy, Debug, Clone, PartialEq)]
-pub struct Whitespace(Any);
+pub struct Whitespace();
+impl From<&mut Chars<'_>> for Whitespace {
+    fn from(chars: &mut Chars) -> Self {
+        while let AtomicToken::Whitespace = chars.next().unwrap().into() {}
+        Whitespace()
+    }
+}
 #[derive(Copy, Debug, Clone, PartialEq)]
 pub struct Plus;
 #[derive(Copy, Debug, Clone, PartialEq)]
@@ -136,22 +326,35 @@ pub struct LParen;
 pub struct RParen;
 #[derive(Copy, Debug, Clone, PartialEq)]
 pub struct Newline;
+impl From<&mut Chars<'_>> for Newline {
+    fn from(chars: &mut Chars) -> Self {
+        while let Some(char) = chars.next() {
+            if !variant_eq(&char.into(), &AtomicToken::Newline) {
+                break;
+            }
+        }
+        Newline
+    }
+}
 #[derive(Copy, Debug, Clone, PartialEq)]
 pub struct Unknown;
 
-impl<'a> From<NumberData<'a>> for Token<'a> {
-    fn from(val: NumberData<'a>) -> Self {
+fn main() {
+    println!("{:#?}", tokenize("1+2"));
+}
+impl From<NumberData> for Token {
+    fn from(val: NumberData) -> Self {
         Token::NumberData(NumberData::from(val.0))
     }
 }
-impl<'a> From<Number<&'a str>> for Token<'a> {
-    fn from(val: Number<&'a str>) -> Self {
+impl From<Number<String>> for Token {
+    fn from(val: Number<String>) -> Self {
         Token::NumberData(NumberData::from(val.0))
     }
 }
-impl<'a> From<&'a str> for NumberData<'a> {
-    fn from(val: &'a str) -> Self {
-        NumberData::<'a>(val)
+impl From<String> for NumberData {
+    fn from(val: String) -> Self {
+        NumberData(val)
     }
 }
 
@@ -185,116 +388,67 @@ where
         <rug::Rational as FromStr>::from_str(&val.0.to_string()).unwrap()
     }
 }
-impl<'a, T> From<NumberData<'a>> for Number<T> {
+
+impl<T> From<NumberData> for Number<T> {
     fn from(x: NumberData) -> Self {
         x.into()
     }
 }
-impl<'a, T> From<Number<T>> for NumberData<'a>
+
+impl<T> From<Number<T>> for NumberData
 where
     T: std::fmt::Display,
 {
     fn from(val: Number<T>) -> Self {
         let mut str = String::new();
         str.push_str(&val.0.to_string());
-        NumberData(&str.as_str())
-    }
-}
-impl<'a> From<(char, &mut Chars<'a>)> for NumberData<'a> {
-    fn from(input: (char, &mut Chars<'a>)) -> Self {
-        let xx: Number<Rational> = input.into();
-        let mut str: String = String::new();
-        str.push_str(&xx.0.to_string());
-        NumberData(&str.as_str())
-    }
-}
-impl<'a, T: FromStr> From<(char, &mut Chars<'a>)> for Number<T>
-where
-    T: FromStr,
-    <T as FromStr>::Err: std::fmt::Debug,
-{
-    fn from(val: (char, &mut Chars<'a>)) -> Self {
-        let (c, chars) = val;
-        let mut dec = 0;
-        let mut rat = false;
-        let mut num = String::new();
-        num.push(c);
-        while let Some(c) = chars.next() {
-            if c.is_digit(10) {
-                num.push(c);
-
-                if rat {
-                    dec += 1;
-                }
-            } else if !rat && c == '.' {
-                rat = true;
-            } else {
-                break;
-            }
-        }
-
-        Number(T::from_str(&format!("{num}/1{den}", den = &"0".repeat(dec)[..])[..]).unwrap())
+        NumberData(str)
     }
 }
 
-impl<'a> From<Identifier<'a>> for Token<'a> {
-    fn from(val: Identifier<'a>) -> Self {
-        Token::Identifier(Identifier(val.0))
+// impl From<String> for NumberData {
+//     fn from(input: String) -> Self {
+//         let xx: Number<Rational> = input;
+//         let mut str: String = String::new();
+//         str.push(xx.0.to_string().chars());
+//         NumberData(&xx.0.to_string())
+//     }
+// }
+// impl<T> From<String> for NumberData {
+//     fn from(input: String) -> Self {
+//         let xx: Number<T> = input;
+//         NumberData(xx.0.to_string())
+//     }
+// }
+
+// impl<T> From<String> for Number<T>
+// where
+//     T: FromStr,
+//     <T as FromStr>::Err: std::fmt::Debug,
+// {
+//     fn from(mut val: String) -> Self {
+//     }
+// }
+
+impl From<Identifier> for Token {
+    fn from(val: Identifier) -> Self {
+        Token::Identifier(val)
     }
 }
-impl<'a> From<(char, &mut Chars<'a>)> for Identifier<'a> {
-    fn from(val: (char, &mut Chars<'a>)) -> Self {
-        let (c, chars) = val;
-        let mut id = String::new();
-        id.push(c);
-        while let Some(c) = chars.next() {
-            if c.is_alphanumeric() {
-                id.push(c);
-            } else {
-                break;
-            }
-        }
-        Identifier(&id)
+impl From<String> for Identifier {
+    fn from(val: String) -> Self {
+        Identifier(val)
     }
 }
 
-impl<'a> From<Data<'a>> for Token<'a> {
-    fn from(val: Data<'a>) -> Self {
-        Token::Data(Data(val.0))
+impl From<Data> for Token {
+    fn from(val: Data) -> Self {
+        Token::Data(val)
     }
 }
-impl<'a> From<&mut Chars<'a>> for Data<'a> {
-    fn from(val: &mut Chars<'a>) -> Self {
-        let mut id = String::new();
 
-        let mut escaped = false;
-        let mut peekable = val.peekable();
-        while let Some(c) = peekable.next() {
-            if c == '"'
-                && id.len() > 0
-                && !escaped
-                && peekable.peek().is_some()
-                && peekable.peek() != Some(&'"')
-            {
-                break;
-            }
-            if (c == '"') == escaped {
-                id.push(c);
-                if escaped {
-                    escaped = false
-                }
-            } else {
-                if escaped {
-                    break;
-                }
-                escaped = true;
-            }
-        }
-        // "hello ""clarice"""
-        // hello ""clarice"""
-        // hello "clarice"""
-        // hello "clarice""
-        // hello "clarice"
-        Data(&id)
+impl From<String> for Data {
+    fn from(val: String) -> Self {
+        Data(val)
     }
 }

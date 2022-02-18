@@ -7,5 +7,5 @@
 extern crate num_derive; //compiles without this? possibly built-in now? 2022-02-02 ish update
 
 pub fn main() -> ! {
-    chip::lang::repl::token::new();
+    chip::lang::repl::token::repl();
 }
