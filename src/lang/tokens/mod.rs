@@ -128,7 +128,6 @@ enum DataToken {
     Number,
     Data,
     Identifier,
-    Unknown,
 }
 
 pub(crate) fn tokenize(str: &str) -> Vec<Token> {
@@ -258,11 +257,6 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
                             is_next_char = true;
                             Token::Data(Data(string.clone()))
                         }
-
-                        _ => {
-                            is_next_char = true;
-                            Token::Unknown(Unknown)
-                        }
                     };
                 }
                 result
@@ -286,11 +280,6 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
     tokens
 }
 
-impl Token {
-    fn tokenize(s: &str) -> Vec<Token> {
-        tokenize(s)
-    }
-}
 #[derive(Debug, Clone, PartialEq)]
 pub struct NumberData(String);
 pub struct Number<T>(T);
@@ -340,9 +329,6 @@ impl From<&mut Chars<'_>> for Newline {
 #[derive(Copy, Debug, Clone, PartialEq)]
 pub struct Unknown;
 
-fn main() {
-    println!("{:#?}", tokenize("1+2"));
-}
 impl From<NumberData> for Token {
     fn from(val: NumberData) -> Self {
         Token::NumberData(NumberData::from(val.0))
