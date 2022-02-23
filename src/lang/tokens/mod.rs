@@ -57,7 +57,7 @@ pub(crate) fn new() {
     // 32 + 10
     // 42"#;
     let y = tokenize(x);
-    println!("{y:#?}");
+    println!("{:#?}", y.0);
 
     let z = tokenize(
         "x = 10
@@ -73,7 +73,7 @@ pub(crate) fn new() {
     end
     ",
     );
-    println!("{z:#?}");
+    println!("{:#?}", z.0);
 }
 pub enum AtomicToken {
     Whitespace,
@@ -129,14 +129,17 @@ enum DataToken {
     Data,
     Identifier,
 }
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tokens(pub(crate) Vec<Token>);
 
-pub(crate) fn tokenize(str: &str) -> Vec<Token> {
+pub(crate) fn tokenize(str: &str) -> Tokens {
     let mut tokens = Vec::new();
     let mut chars = str.chars();
     let mut char = chars.next();
     let mut is_next_char = false;
     let mut is_complex = false;
     while char.is_some() {
+        // tokens.push(tokenize(&char, &chars)); // todo figure out how to do this
         let mut char_unwrapped = char.unwrap();
         tokens.push(match AtomicToken::from(char_unwrapped) {
             AtomicToken::Plus => Token::Plus(Plus),
@@ -146,8 +149,8 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
             AtomicToken::Modulo => Token::Modulo(Modulo),
             AtomicToken::LParen => Token::LParen(LParen),
             AtomicToken::RParen => Token::RParen(RParen),
-            AtomicToken::Newline => Token::Newline(Newline),
-            AtomicToken::Whitespace => Token::Whitespace(Whitespace()),
+            AtomicToken::Newline => Token::Newline(Newline), // todo compress newlines
+            AtomicToken::Whitespace => Token::Whitespace(Whitespace()), // todo compress whitespaces
             atomic_token => {
                 is_complex = true;
                 let mut string = String::new();
@@ -164,12 +167,9 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
                 } else {
                     DataToken::Identifier
                 };
-
                 let mut result = Token::Unknown(Unknown);
-                print!("bef|\n");
 
                 while !is_next_char {
-                    print!("res{result:?}|str{string:?}|chr{char:?}\n");
                     result = match data_type {
                         DataToken::Number => {
                             print!("number|\n");
@@ -268,7 +268,6 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
         is_next_char = false;
         is_complex = false;
     }
-
     tokens.retain(|t| -> bool {
         !variant_eq(t, &Token::Whitespace(Whitespace()))
             && !variant_eq(t, &Token::Newline(Newline))
@@ -277,19 +276,18 @@ pub(crate) fn tokenize(str: &str) -> Vec<Token> {
     while tokens.last().is_some() && variant_eq(tokens.last().unwrap(), &Token::RParen(RParen)) {
         tokens.pop();
     }
-    tokens
+    Tokens(tokens)
 }
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct NumberData(String);
 pub struct Number<T>(T);
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier(String);
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data(String);
 #[derive(Copy, Debug, Clone, PartialEq)]
 pub struct Whitespace();
+/// broken
 impl From<&mut Chars<'_>> for Whitespace {
     fn from(chars: &mut Chars) -> Self {
         while let Some(char) = chars.next() {
@@ -316,6 +314,7 @@ pub struct LParen;
 pub struct RParen;
 #[derive(Copy, Debug, Clone, PartialEq)]
 pub struct Newline;
+/// broken
 impl From<&mut Chars<'_>> for Newline {
     fn from(chars: &mut Chars) -> Self {
         while let Some(char) = chars.next() {
@@ -328,7 +327,6 @@ impl From<&mut Chars<'_>> for Newline {
 }
 #[derive(Copy, Debug, Clone, PartialEq)]
 pub struct Unknown;
-
 impl From<NumberData> for Token {
     fn from(val: NumberData) -> Self {
         Token::NumberData(NumberData::from(val.0))
@@ -344,29 +342,6 @@ impl From<String> for NumberData {
         NumberData(val)
     }
 }
-
-// impl<T> Zero for Number<T>
-// where
-//     T: Add,
-// {
-//     fn set_zero(&mut self) {
-//         *self = Zero::zero();
-//     }
-
-//     fn is_zero(&self) -> bool {
-//         true
-//     }
-// }
-
-// impl<T> Add for Number<T>
-// where
-//     T: Add,
-//     T: Default,
-// {
-//     fn add(&mut self, x: Number<T>) -> Number<T> {
-//         Number(self.0 + x.0)
-//     }
-// }
 impl<T> From<Number<T>> for rug::Rational
 where
     T: std::fmt::Display,
@@ -375,13 +350,11 @@ where
         <rug::Rational as FromStr>::from_str(&val.0.to_string()).unwrap()
     }
 }
-
 impl<T> From<NumberData> for Number<T> {
     fn from(x: NumberData) -> Self {
         x.into()
     }
 }
-
 impl<T> From<Number<T>> for NumberData
 where
     T: std::fmt::Display,
@@ -392,31 +365,6 @@ where
         NumberData(str)
     }
 }
-
-// impl From<String> for NumberData {
-//     fn from(input: String) -> Self {
-//         let xx: Number<Rational> = input;
-//         let mut str: String = String::new();
-//         str.push(xx.0.to_string().chars());
-//         NumberData(&xx.0.to_string())
-//     }
-// }
-// impl<T> From<String> for NumberData {
-//     fn from(input: String) -> Self {
-//         let xx: Number<T> = input;
-//         NumberData(xx.0.to_string())
-//     }
-// }
-
-// impl<T> From<String> for Number<T>
-// where
-//     T: FromStr,
-//     <T as FromStr>::Err: std::fmt::Debug,
-// {
-//     fn from(mut val: String) -> Self {
-//     }
-// }
-
 impl From<Identifier> for Token {
     fn from(val: Identifier) -> Self {
         Token::Identifier(val)
@@ -427,13 +375,11 @@ impl From<String> for Identifier {
         Identifier(val)
     }
 }
-
 impl From<Data> for Token {
     fn from(val: Data) -> Self {
         Token::Data(val)
     }
 }
-
 impl From<String> for Data {
     fn from(val: String) -> Self {
         Data(val)
