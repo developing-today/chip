@@ -18,13 +18,13 @@ pub(crate) fn new() {
         .add_plugins(DefaultPlugins)
         .add_plugin(ShapePlugin)
         .add_startup_system(setup_system)
-        .insert_resource(chip::CpuTimer(Timer::from_seconds(0.1, true)))
-        .insert_resource(chip::AppTimer(Timer::from_seconds(1. / 60., true)))
+        .insert_resource(chiploxide::CpuTimer(Timer::from_seconds(0.1, true)))
+        .insert_resource(chiploxide::AppTimer(Timer::from_seconds(1. / 60., true)))
         .add_system(screen::pixels_change_color)
         .add_system(screen::pixels_disable)
         .add_system(keyboard::key_pressed)
         .add_system(keyboard::key_just_released)
-        .add_system(chip::cpu_cycle)
+        .add_system(chiploxide::cpu_cycle)
         .run();
 }
 fn setup_system(mut commands: Commands) {
@@ -54,10 +54,10 @@ fn setup_system(mut commands: Commands) {
     }
     commands
         .spawn()
-        .insert(chip::Cpu {
-            registers: chip::default_registers(),
+        .insert(chiploxide::Cpu {
+            registers: chiploxide::default_registers(),
             stack: [0; usize::BITS as usize * 4],
-            memory: chip::default_memory(),
+            memory: chiploxide::default_memory(),
             counter: 0,
             pointer: 0,
             i: 0,

@@ -1,4 +1,4 @@
-use crate::lang::tokens::{RParen, Tokens, Unknown};
+use chiploxide::lang::tokens::{RParen, Tokens, Unknown};
 
 use super::super::super::tokens::Token;
 

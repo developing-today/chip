@@ -7,5 +7,5 @@
 extern crate num_derive;
 
 pub fn main() -> ! {
-    chip::lang::repl::token::new();
+    chiploxide::lang::repl::token::new();
 }

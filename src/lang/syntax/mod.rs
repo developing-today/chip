@@ -1,32 +1,32 @@
 pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!(
         "{:?}",
         token::new(
             r#"pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!("{:?}", token::new(r#"pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!("{:?}", token::new(r#"pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!("{:?}", token::new(r#"pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!(
         "{:?}",
         token::new(
             r#"pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!("{:?}", token::new(r#"pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!("{:?}", token::new(r#"pub mod trees;
-use crate::lang::repl::token;
+use chiploxide::lang::repl::token;
 fn main() {
     println!("{:?}", token::new(r#""#
         )

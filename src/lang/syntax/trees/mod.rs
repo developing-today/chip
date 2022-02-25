@@ -1,6 +1,6 @@
 mod leafs;
 
-use crate::lang::tokens::{Token, Tokens, Unknown};
+use chiploxide::lang::tokens::{Token, Tokens, Unknown};
 
 use self::leafs::{Leaf, Leafs};
 #[derive(Debug, Clone, PartialEq)]

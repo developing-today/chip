@@ -1,3 +1,3 @@
 fn main() {
-    chip::main();
+    chiploxide::main();
 }

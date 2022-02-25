@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Write;
 
-use crate::lang::{syntax::trees::Tree, tokens::Tokens};
+use chiploxide::lang::{syntax::trees::Tree, tokens::Tokens};
 
 pub fn new(tokens: Tokens) -> Tree {
     // cli input arguments (clap?)
