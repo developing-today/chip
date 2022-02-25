@@ -2,6 +2,11 @@
 name = "chiploxide"
 version = "0.2.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+description = """
+(todo) mystery, challenges, games, an ide 👁️‍🗨️
+"""
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 # todo: split project into multiple crates
