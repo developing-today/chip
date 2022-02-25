@@ -2,7 +2,9 @@ use bevy::{
     input::Input,
     prelude::{KeyCode, Query, Res},
 };
-pub(crate) fn key_pressed(keys: Res<Input<KeyCode>>, mut query: Query<&mut super::chiploxide::Cpu>) {
+
+use super::chip::Cpu;
+pub(crate) fn key_pressed(keys: Res<Input<KeyCode>>, mut query: Query<&mut Cpu>) {
     for mut cpu in query.iter_mut() {
         for key in keys.get_pressed() {
             match key {
@@ -36,7 +38,7 @@ pub(crate) fn key_pressed(keys: Res<Input<KeyCode>>, mut query: Query<&mut super
 }
 pub(crate) fn key_just_released(
     keys: Res<Input<KeyCode>>,
-    mut query: Query<&mut super::chiploxide::Cpu>,
+    mut query: Query<&mut Cpu>,
 ) {
     for mut cpu in query.iter_mut() {
         for key in keys.get_just_released() {

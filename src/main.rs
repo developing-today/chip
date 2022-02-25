@@ -1,3 +1,3 @@
 fn main() {
-    chiploxide::main();
+    crate::main();
 }

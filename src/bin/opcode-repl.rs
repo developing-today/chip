@@ -3,9 +3,11 @@
 #![feature(unboxed_closures)]
 #![feature(unwrap_infallible)]
 
+use chiploxide::lang;
+
 #[macro_use]
 extern crate num_derive;
 
-pub fn main() -> ! {
-    chiploxide::lang::repl::token::new();
+pub fn main() -> () {
+    lang::repl::token::new("123123");
 }

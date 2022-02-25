@@ -12,19 +12,21 @@ use bevy_prototype_lyon::{
     shapes,
 };
 use std::ops;
+
+use self::{chip::{cpu_cycle, CpuTimer, AppTimer, Cpu, default_registers, default_memory}, keyboard::{key_pressed, key_just_released}};
 pub(crate) fn new() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(ShapePlugin)
         .add_startup_system(setup_system)
-        .insert_resource(chiploxide::CpuTimer(Timer::from_seconds(0.1, true)))
-        .insert_resource(chiploxide::AppTimer(Timer::from_seconds(1. / 60., true)))
+        .insert_resource(CpuTimer(Timer::from_seconds(0.1, true)))
+        .insert_resource(AppTimer(Timer::from_seconds(1. / 60., true)))
         .add_system(screen::pixels_change_color)
         .add_system(screen::pixels_disable)
-        .add_system(keyboard::key_pressed)
-        .add_system(keyboard::key_just_released)
-        .add_system(chiploxide::cpu_cycle)
+        .add_system(key_pressed)
+        .add_system(key_just_released)
+        .add_system(cpu_cycle)
         .run();
 }
 fn setup_system(mut commands: Commands) {
@@ -54,10 +56,10 @@ fn setup_system(mut commands: Commands) {
     }
     commands
         .spawn()
-        .insert(chiploxide::Cpu {
-            registers: chiploxide::default_registers(),
+        .insert(Cpu {
+            registers: default_registers(),
             stack: [0; usize::BITS as usize * 4],
-            memory: chiploxide::default_memory(),
+            memory: default_memory(),
             counter: 0,
             pointer: 0,
             i: 0,
